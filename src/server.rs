@@ -7,18 +7,16 @@ use super::packet_router;
 
 pub fn listen() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
-    let mut state = 0;
+    
     for stream in listener.incoming() {
         println!("connection");
         let stream = stream.unwrap();
-
-        handle_connection(stream, state);
+        handle_connection(stream);
     }
 }
 
-
-pub fn handle_connection(mut stream: TcpStream, mut state:u64) {
-    
+pub fn handle_connection(mut stream: TcpStream) {
+    let mut state = 0;
     loop {
         match read_var_int(&mut stream) {
             Ok(_length) => {

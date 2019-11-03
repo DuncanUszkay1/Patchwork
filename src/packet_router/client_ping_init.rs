@@ -14,23 +14,14 @@ pub fn init_client_ping(p: Packet, conn_id: i32, messenger: Sender<MessengerOper
             let status_response = packet::StatusResponse {
                 json_response: String::from(FAKE_RESPONSE),
             };
-            messenger
-                .send(MessengerOperations::Send(SendPacketMessage {
-                    conn_id,
-                    packet: Packet::StatusResponse(status_response),
-                }))
-                .unwrap();
+
+            send_packet!(messenger, conn_id, Packet::StatusResponse(status_response)).unwrap();
         }
         Packet::Ping(ping) => {
             let pong = packet::Pong {
                 payload: ping.payload,
             };
-            messenger
-                .send(MessengerOperations::Send(SendPacketMessage {
-                    conn_id,
-                    packet: Packet::Pong(pong),
-                }))
-                .unwrap();
+            send_packet!(messenger, conn_id, Packet::Pong(pong)).unwrap();
         }
         _ => {}
     }

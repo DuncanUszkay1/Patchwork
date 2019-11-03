@@ -1,6 +1,8 @@
 #![allow(unused_variables)]
 //Had to disable unused variables here since it wasn't working with packet::new
-use super::minecraft_protocol::{write_var_int, MinecraftProtocolReader, MinecraftProtocolWriter};
+use super::minecraft_protocol::{
+    write_var_int, ChunkSection, MinecraftProtocolReader, MinecraftProtocolWriter,
+};
 use std::fmt::Debug;
 use std::io::{Cursor, Read, Write};
 
@@ -89,7 +91,7 @@ macro_rules! packet {
                 $name { $( $fieldname: read_packet_field!(stream, $datatype) ),* }
             }
             pub fn write<S: MinecraftProtocolWriter>(&self, stream: &mut S) {
-                $( write_packet_field!(stream, self.$fieldname, $datatype) );*
+                $( write_packet_field!(stream, self.$fieldname.clone(), $datatype) );*
             }
         }
     )
@@ -111,6 +113,9 @@ macro_rules! mc_to_rust_datatype {
     (Int) => {
         i32
     };
+    (IntArray) => {
+        Vec::<i32>
+    };
     (Float) => {
         f32
     };
@@ -125,6 +130,9 @@ macro_rules! mc_to_rust_datatype {
     };
     (Boolean) => {
         bool
+    };
+    (ChunkSection) => {
+        ChunkSection
     };
 }
 
@@ -144,6 +152,9 @@ macro_rules! read_packet_field {
     ($stream:ident, Int) => {
         $stream.read_int()
     };
+    ($stream:ident, IntArray) => {
+        $stream.read_int_array()
+    };
     ($stream:ident, Float) => {
         $stream.read_float()
     };
@@ -158,6 +169,9 @@ macro_rules! read_packet_field {
     };
     ($stream:ident, Boolean) => {
         $stream.read_boolean()
+    };
+    ($stream:ident, ChunkSection) => {
+        $stream.read_chunk_section()
     };
 }
 
@@ -177,6 +191,9 @@ macro_rules! write_packet_field {
     ($stream:ident, $value:expr, Int) => {
         $stream.write_int($value)
     };
+    ($stream:ident, $value:expr, IntArray) => {
+        $stream.write_int_array($value)
+    };
     ($stream:ident, $value:expr, Float) => {
         $stream.write_float($value)
     };
@@ -191,6 +208,9 @@ macro_rules! write_packet_field {
     };
     ($stream:ident, $value:expr, Boolean) => {
         $stream.write_boolean($value)
+    };
+    ($stream:ident, $value:expr, ChunkSection) => {
+        $stream.write_chunk_section($value)
     };
 }
 
@@ -209,9 +229,9 @@ packet_boilerplate!(
     ),
     (1, StatusRequest, 0, []),
     (1, Ping, 1, [(payload, Long)]),
+    (2, LoginStart, 0, [(username, String)]),
     (11, Pong, 1, [(payload, Long)]),
     (11, StatusResponse, 0, [(json_response, String)]),
-    (2, LoginStart, 0, [(username, String)]),
     (11, LoginSuccess, 2, [(uuid, String), (username, String)]),
     (
         11,
@@ -228,7 +248,7 @@ packet_boilerplate!(
         ]
     ),
     (
-        3,
+        11,
         PlayerPositionAndLook,
         0x32,
         [
@@ -239,6 +259,21 @@ packet_boilerplate!(
             (pitch, Float),
             (flags, Byte),
             (teleport_id, VarInt)
+        ]
+    ),
+    (
+        11,
+        ChunkData,
+        0x22,
+        [
+            (chunk_x, Int),
+            (chunk_z, Int),
+            (full_chunk, Boolean), //always true
+            (primary_bit_mask, VarInt),
+            (size, VarInt),
+            (data, ChunkSection), //actually a chunk array, but can pretend its 1 for now
+            (biomes, IntArray),
+            (number_of_block_entities, VarInt)
         ]
     )
 );

@@ -9,6 +9,8 @@ pub trait MinecraftProtocolReader {
     fn read_long(&mut self) -> i64;
     fn read_string(&mut self) -> String;
     fn read_int(&mut self) -> i32;
+    fn read_int_array(&mut self) -> Vec<i32>;
+    fn read_chunk_section(&mut self) -> ChunkSection;
     fn read_float(&mut self) -> f32;
     fn read_double(&mut self) -> f64;
     fn read_byte(&mut self) -> i8;
@@ -22,11 +24,22 @@ pub trait MinecraftProtocolWriter {
     fn write_var_int(&mut self, v: u64);
     fn write_string(&mut self, v: String);
     fn write_int(&mut self, v: i32);
+    fn write_int_array(&mut self, v: Vec<i32>);
+    fn write_chunk_section(&mut self, v: ChunkSection);
     fn write_float(&mut self, v: f32);
     fn write_double(&mut self, v: f64);
     fn write_byte(&mut self, v: i8);
     fn write_u_byte(&mut self, v: u8);
     fn write_boolean(&mut self, v: bool);
+}
+
+#[derive(Debug, Clone)]
+pub struct ChunkSection {
+    pub bits_per_block: u8, //always 14 until we implement palettes
+    pub data_array_length: u64,
+    pub block_ids: Vec<i32>,   //4096 block ids
+    pub block_light: Vec<u64>, //2048 bytes (all 1s)
+    pub sky_light: Vec<u64>,   //2048 bytes (all 1s)
 }
 
 pub fn read_var_int<S: Read>(stream: &mut S) -> Result<u64, Error> {
@@ -46,6 +59,20 @@ pub fn read_var_int<S: Read>(stream: &mut S) -> Result<u64, Error> {
     }
 
     Ok(result)
+}
+
+pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
+    stream.write_u_byte(v.bits_per_block);
+    stream.write_var_int(v.data_array_length);
+    for _ in 0..896 {
+        stream.write_long(1000000000000); //write all air blocks
+    }
+    for _ in 0..2048 {
+        stream.write_u8(!0b0); //write max block light
+    }
+    for _ in 0..2048 {
+        stream.write_u8(!0b0); //write max sky light
+    }
 }
 
 pub fn write_var_int<S: Write>(stream: &mut S, v: u64) {
@@ -88,8 +115,16 @@ impl<T: Read> MinecraftProtocolReader for T {
         self.read_i32::<BigEndian>().unwrap()
     }
 
+    fn read_int_array(&mut self) -> Vec<i32> {
+        unimplemented!();
+    }
+
     fn read_float(&mut self) -> f32 {
         self.read_f32::<BigEndian>().unwrap()
+    }
+
+    fn read_chunk_section(&mut self) -> ChunkSection {
+        unimplemented!();
     }
 
     fn read_double(&mut self) -> f64 {
@@ -137,6 +172,15 @@ impl<T: Write> MinecraftProtocolWriter for T {
 
     fn write_int(&mut self, v: i32) {
         self.write_i32::<BigEndian>(v).unwrap();
+    }
+
+    fn write_int_array(&mut self, v: Vec<i32>) {
+        v.iter()
+            .for_each(|element| self.write_i32::<BigEndian>(*element).unwrap());
+    }
+
+    fn write_chunk_section(&mut self, v: ChunkSection) {
+        write_chunk_section(self, v);
     }
 
     fn write_float(&mut self, v: f32) {

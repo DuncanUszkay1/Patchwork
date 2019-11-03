@@ -3,6 +3,15 @@ use std::collections::HashMap;
 use std::net::TcpStream;
 use std::sync::mpsc::Receiver;
 
+macro_rules! send_packet {
+    ($messenger:expr, $conn_id:expr, $packet:expr) => {
+        $messenger.send(MessengerOperations::Send(SendPacketMessage {
+            conn_id: $conn_id,
+            packet: $packet,
+        }))
+    };
+}
+
 pub enum MessengerOperations {
     Send(SendPacketMessage),
     New(NewConnectionMessage),

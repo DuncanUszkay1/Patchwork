@@ -212,20 +212,12 @@ packet_boilerplate!(
     (11, Pong, 1, [(payload, Long)]),
     (11, StatusResponse, 0, [(json_response, String)]),
     (2, LoginStart, 0, [(username, String)]),
-    (   
-        2,
-        LoginSuccess,
-        2,
-        [
-            (uuid, String),
-            (username, String)
-        ]
-    ),
+    (11, LoginSuccess, 2, [(uuid, String), (username, String)]),
     (
-        3,
+        11,
         JoinGame,
-        25,
-        [   
+        0x25,
+        [
             (entity_id, Int),
             (gamemode, UByte),
             (dimension, Int),
@@ -233,13 +225,12 @@ packet_boilerplate!(
             (max_players, UByte),
             (level_type, String),
             (reduced_debug_info, Boolean)
-            
         ]
     ),
     (
         3,
         PlayerPositionAndLook,
-        32,
+        0x32,
         [
             (x, Double),
             (y, Double),

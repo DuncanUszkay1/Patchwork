@@ -32,10 +32,12 @@ pub fn handle_connection(
     messenger: Sender<MessengerOperations>,
 ) {
     let mut state = 0;
-    messenger.send(MessengerOperations::New(NewConnectionMessage {
-        conn_id,
-        socket: stream.try_clone().unwrap(),
-    })).unwrap();
+    messenger
+        .send(MessengerOperations::New(NewConnectionMessage {
+            conn_id,
+            socket: stream.try_clone().unwrap(),
+        }))
+        .unwrap();
     loop {
         match read_var_int(&mut stream) {
             Ok(_length) => {

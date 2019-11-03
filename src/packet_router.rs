@@ -1,9 +1,9 @@
+use super::game_state;
+use super::game_state::play;
 use super::messenger;
 use super::messenger::MessengerOperations;
 use super::packet;
 use super::packet::Packet;
-use super::game_state;
-use super::game_state::play;
 use std::sync::mpsc::Sender;
 
 mod border_cross_login_init;

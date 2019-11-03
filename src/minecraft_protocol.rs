@@ -105,13 +105,13 @@ impl<T: Read> MinecraftProtocolReader for T {
     }
 
     fn read_boolean(&mut self) -> bool {
-        match self.read_u8().unwrap(){
-            1=>true,
-            0=>false,
-            _=>{
+        match self.read_u8().unwrap() {
+            1 => true,
+            0 => false,
+            _ => {
                 println!("Error while unwrapping boolean");
                 false
-            },
+            }
         }
     }
 }
@@ -150,11 +150,11 @@ impl<T: Write> MinecraftProtocolWriter for T {
     fn write_byte(&mut self, v: i8) {
         self.write_i8(v).unwrap();
     }
-    
+
     fn write_u_byte(&mut self, v: u8) {
         self.write_u8(v).unwrap();
     }
-    
+
     fn write_boolean(&mut self, v: bool) {
         match v {
             true => self.write_u8(1).unwrap(),

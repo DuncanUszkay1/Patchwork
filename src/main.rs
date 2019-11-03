@@ -1,9 +1,9 @@
+mod game_state;
 mod messenger;
 mod minecraft_protocol;
 mod packet;
 mod packet_router;
 mod server;
-mod game_state;
 use messenger::start_messenger;
 use std::sync::mpsc::channel;
 use std::thread;

@@ -1,7 +1,7 @@
 use super::super::minecraft_protocol::ChunkSection;
 use super::messenger::{MessengerOperations, SendPacketMessage};
 use super::packet;
-use super::packet::{read, write, Packet};
+use super::packet::Packet;
 use std::sync::mpsc::Sender;
 
 // Called upon user login
@@ -15,7 +15,7 @@ pub fn init_login(
     match p.clone() {
         Packet::LoginStart(login_start) => {
             *state = 3;
-            confirm_login(p, conn_id, messenger, login_start);
+            confirm_login(conn_id, messenger, login_start);
         }
         _ => {
             println!("Login failed");
@@ -24,7 +24,6 @@ pub fn init_login(
 }
 
 fn confirm_login(
-    p: Packet,
     conn_id: i32,
     messenger: Sender<MessengerOperations>,
     login_start: packet::LoginStart,

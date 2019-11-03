@@ -65,13 +65,17 @@ pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
     stream.write_u_byte(v.bits_per_block);
     stream.write_var_int(v.data_array_length);
     for _ in 0..896 {
-        stream.write_long(1000000000000); //write all air blocks
+        stream.write_long(1_000_000_000_000); //write all air blocks
     }
     for _ in 0..2048 {
-        stream.write_u8(!0b0); //write max block light
+        stream
+            .write_u8(!0b0)
+            .expect("could not write max block light"); //write max block light
     }
     for _ in 0..2048 {
-        stream.write_u8(!0b0); //write max sky light
+        stream
+            .write_u8(!0b0)
+            .expect("could not write max sky light"); //write max sky light
     }
 }
 
@@ -200,9 +204,10 @@ impl<T: Write> MinecraftProtocolWriter for T {
     }
 
     fn write_boolean(&mut self, v: bool) {
-        match v {
-            true => self.write_u8(1).unwrap(),
-            _ => self.write_u8(0).unwrap(),
+        if v {
+            self.write_u8(1).unwrap()
+        } else {
+            self.write_u8(0).unwrap()
         }
     }
 }

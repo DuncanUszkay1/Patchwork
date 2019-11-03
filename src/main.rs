@@ -5,8 +5,6 @@ mod packet;
 mod packet_router;
 mod server;
 use messenger::start_messenger;
-use minecraft_protocol::{write_chunk_section, ChunkSection};
-use std::io::{Cursor, Read, Write};
 use std::sync::mpsc::channel;
 use std::thread;
 

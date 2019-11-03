@@ -108,6 +108,24 @@ macro_rules! mc_to_rust_datatype {
     (String) => {
         String
     };
+    (Int) => {
+        i32
+    };
+    (Float) => {
+        f32
+    };
+    (Double) => {
+        f64
+    };
+    (Byte) => {
+        i8
+    };
+    (UByte) => {
+        u8
+    };
+    (Boolean) => {
+        bool
+    };
 }
 
 macro_rules! read_packet_field {
@@ -123,6 +141,24 @@ macro_rules! read_packet_field {
     ($stream:ident, String) => {
         $stream.read_string()
     };
+    ($stream:ident, Int) => {
+        $stream.read_int()
+    };
+    ($stream:ident, Float) => {
+        $stream.read_float()
+    };
+    ($stream:ident, Double) => {
+        $stream.read_double()
+    };
+    ($stream:ident, Byte) => {
+        $stream.read_byte()
+    };
+    ($stream:ident, UByte) => {
+        $stream.read_u_byte()
+    };
+    ($stream:ident, Boolean) => {
+        $stream.read_boolean()
+    };
 }
 
 macro_rules! write_packet_field {
@@ -137,6 +173,24 @@ macro_rules! write_packet_field {
     };
     ($stream:ident, $value:expr, String) => {
         $stream.write_string($value.clone())
+    };
+    ($stream:ident, $value:expr, Int) => {
+        $stream.write_int($value)
+    };
+    ($stream:ident, $value:expr, Float) => {
+        $stream.write_float($value)
+    };
+    ($stream:ident, $value:expr, Double) => {
+        $stream.write_double($value)
+    };
+    ($stream:ident, $value:expr, Byte) => {
+        $stream.write_byte($value)
+    };
+    ($stream:ident, $value:expr, UByte) => {
+        $stream.write_u_byte($value)
+    };
+    ($stream:ident, $value:expr, Boolean) => {
+        $stream.write_boolean($value)
     };
 }
 
@@ -156,5 +210,44 @@ packet_boilerplate!(
     (1, StatusRequest, 0, []),
     (1, Ping, 1, [(payload, Long)]),
     (11, Pong, 1, [(payload, Long)]),
-    (11, StatusResponse, 0, [(json_response, String)])
+    (11, StatusResponse, 0, [(json_response, String)]),
+    (2, LoginStart, 0, [(username, String)]),
+    (   
+        2,
+        LoginSuccess,
+        2,
+        [
+            (uuid, String),
+            (username, String)
+        ]
+    ),
+    (
+        3,
+        JoinGame,
+        25,
+        [   
+            (entity_id, Int),
+            (gamemode, UByte),
+            (dimension, Int),
+            (difficulty, UByte),
+            (max_players, UByte),
+            (level_type, String),
+            (reduced_debug_info, Boolean)
+            
+        ]
+    ),
+    (
+        3,
+        PlayerPositionAndLook,
+        32,
+        [
+            (x, Double),
+            (y, Double),
+            (z, Double),
+            (yaw, Float),
+            (pitch, Float),
+            (flags, Byte),
+            (teleport_id, VarInt)
+        ]
+    )
 );

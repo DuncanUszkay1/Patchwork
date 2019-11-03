@@ -6,6 +6,9 @@ pub fn init_handshake(p: Packet, state: &mut u64) {
 
     *state = match p.clone() {
         Packet::Handshake(handshake) => handshake.next_state,
-        _ => *state,
+        _ => {
+            println!("Invalid packet (handshake)");
+            *state
+        }
     };
 }

@@ -1,3 +1,4 @@
+mod game_state;
 mod messenger;
 mod minecraft_protocol;
 mod packet;

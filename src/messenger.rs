@@ -31,10 +31,7 @@ pub fn start_messenger(receiver: Receiver<MessengerOperations>) {
                     write(&mut socket_clone, msg.packet);
                 }
                 None => {
-                    println!(
-                        "messenger.rs failed to find the conn id {:?}",
-                        msg.conn_id
-                    );
+                    println!("messenger.rs failed to find the conn id {:?}", msg.conn_id);
                 }
             },
             MessengerOperations::New(msg) => {

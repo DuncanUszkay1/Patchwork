@@ -1,28 +1,25 @@
-use super::messenger;
+use super::game_state::player::PlayerStateOperations;
+use super::initiation_protocols::{
+    border_cross_login_init, client_ping_init, handshake_init, in_peer_sub_init, login_init,
+    out_peer_sub_init,
+};
 use super::messenger::MessengerOperations;
-use super::packet;
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
-
-mod border_cross_login_init;
-mod client_ping_init;
-mod handshake_init;
-mod in_peer_sub_init;
-mod login_init;
-mod out_peer_sub_init;
 
 // Routes the packet to the corresponding service according to the connection state
 pub fn route_packet(
     p: Packet,
     state: &mut u64,
-    conn_id: i32,
+    conn_id: u64,
     messenger: Sender<MessengerOperations>,
+    player_state: Sender<PlayerStateOperations>,
 ) {
     let st = Status::value(*state);
     match st {
         Status::Handshake => handshake_init::init_handshake(p, state),
         Status::ClientPing => client_ping_init::init_client_ping(p, conn_id, messenger),
-        Status::Login => login_init::init_login(p, state, conn_id, messenger),
+        Status::Login => login_init::init_login(p, state, conn_id, messenger, player_state),
         Status::Play => (),
         Status::BorderCrossLogin => border_cross_login_init::init_border_cross_login(p, state),
         Status::InPeerSub => in_peer_sub_init::init_incoming_peer_sub(p, state),

@@ -1,7 +1,8 @@
+use super::keep_alive::{KeepAliveOperations, NewKeepAliveConnectionMessage};
 use super::packet::{write, Packet};
 use std::collections::HashMap;
 use std::net::TcpStream;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 
 macro_rules! send_packet {
     ($messenger:expr, $conn_id:expr, $packet:expr) => {
@@ -19,18 +20,21 @@ pub enum MessengerOperations {
 
 #[derive(Debug)]
 pub struct SendPacketMessage {
-    pub conn_id: i32,
+    pub conn_id: u64,
     pub packet: Packet,
 }
 
 #[derive(Debug)]
 pub struct NewConnectionMessage {
-    pub conn_id: i32,
+    pub conn_id: u64,
     pub socket: TcpStream,
 }
 
-pub fn start_messenger(receiver: Receiver<MessengerOperations>) {
-    let mut connection_map = HashMap::<i32, TcpStream>::new();
+pub fn start_messenger(
+    receiver: Receiver<MessengerOperations>,
+    keep_alive_sender: Sender<KeepAliveOperations>,
+) {
+    let mut connection_map = HashMap::<u64, TcpStream>::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {
@@ -45,6 +49,11 @@ pub fn start_messenger(receiver: Receiver<MessengerOperations>) {
             },
             MessengerOperations::New(msg) => {
                 connection_map.insert(msg.conn_id, msg.socket);
+                keep_alive_sender
+                    .send(KeepAliveOperations::New(NewKeepAliveConnectionMessage {
+                        conn_id: msg.conn_id,
+                    }))
+                    .unwrap();
             }
         }
     }

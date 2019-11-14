@@ -6,6 +6,7 @@ use super::initiation_protocols::{
 use super::messenger::MessengerOperations;
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
+use std::collections::HashMap;
 
 // Routes the packet to the corresponding service according to the connection state
 pub fn route_packet(
@@ -14,10 +15,12 @@ pub fn route_packet(
     conn_id: u64,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
+    mut peer_map: &mut HashMap::<u64, String>, 
+    mut next_peer_id:u64,
 ) {
     let st = Status::value(*state);
     match st {
-        Status::Handshake => handshake_init::init_handshake(p, state),
+        Status::Handshake => handshake_init::init_handshake(p, state, &mut peer_map, next_peer_id),
         Status::ClientPing => client_ping_init::init_client_ping(p, conn_id, messenger),
         Status::Login => login_init::init_login(p, state, conn_id, messenger, player_state),
         Status::Play => (),

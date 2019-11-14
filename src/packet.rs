@@ -97,5 +97,6 @@ packet_boilerplate!(
             (pitch, UByte), // for now lets just set it to 0
             (entity_metadata_terminator, UByte)  // always 0xff until we implement entity metadata
         ]
-    )
+    ),
+    (0, P2PHandshake,1,[(peer, String),(next_state, VarInt)])
 );

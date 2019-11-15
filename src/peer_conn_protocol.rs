@@ -1,47 +1,35 @@
-use super::messenger::{MessengerOperations, SendPacketMessage};
+use super::messenger::{MessengerOperations, NewConnectionMessage, SendPacketMessage};
 use super::packet::{Handshake, Packet};
-use std::sync::mpsc::Receiver;
+use super::server;
+
 use std::sync::mpsc::Sender;
-
-pub enum P2POperations {
-    New(NewPeerConnection),
-}
-
-#[derive(Debug, Clone)]
-pub struct Peer {
-    pub conn_id: u64,
-    pub peer_address: String,
-    pub peer_port: u16,
-}
-
-#[derive(Debug, Clone)]
-pub struct NewPeerConnection {
-    pub conn_id: u64,
-    pub peer: Peer,
-}
+use uuid::Uuid;
 
 pub fn send_p2p_handshake(
     conn_id: u64,
     peer_address: String,
     peer_port: u16,
     messenger: Sender<MessengerOperations>,
-    receiver: Receiver<P2POperations>,
-) {
-    while let Ok(msg) = receiver.recv() {
-        match msg {
-            P2POperations::New(_msg) => {
-                send_packet!(
-                    messenger,
-                    conn_id,
-                    Packet::Handshake(Handshake {
-                        protocol_version: 404,
-                        server_address: peer_address.clone(),
-                        server_port: peer_port,
-                        next_state: 6,
-                    })
-                )
-                .unwrap();
-            }
-        }
-    }
+) -> Uuid {
+    let stream = server::new_connection(peer_address.clone(), peer_port);
+    messenger
+        .send(MessengerOperations::New(NewConnectionMessage {
+            conn_id,
+            socket: stream.try_clone().unwrap(),
+        }))
+        .unwrap();
+
+    send_packet!(
+        messenger,
+        conn_id,
+        Packet::Handshake(Handshake {
+            protocol_version: 404,
+            server_address: peer_address.clone(),
+            server_port: peer_port,
+            next_state: 6,
+        })
+    )
+    .unwrap();
+
+    Uuid::new_v4()
 }

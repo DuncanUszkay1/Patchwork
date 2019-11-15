@@ -5,31 +5,15 @@ use super::packet_router;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
-use uuid::Uuid;
 
 use super::game_state::player::PlayerStateOperations;
 use super::messenger::{MessengerOperations, NewConnectionMessage};
-use super::peer_conn_protocol::{send_p2p_handshake, P2POperations};
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Sender;
 
-pub fn listen(
-    messenger: Sender<MessengerOperations>,
-    player_state: Sender<PlayerStateOperations>,
-    p2p_receiver: Receiver<P2POperations>,
-) {
+pub fn listen(messenger: Sender<MessengerOperations>, player_state: Sender<PlayerStateOperations>) {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
 
     let mut next_conn_id = 1;
-    let peer_ip_addr = String::from("127.0.0.1");
-    let peer_port = 8080;
-    new_p2p_connection(
-        next_conn_id,
-        peer_ip_addr,
-        peer_port,
-        messenger.clone(),
-        p2p_receiver,
-    );
-    next_conn_id += 1;
 
     for stream in listener.incoming() {
         println!("connection");
@@ -77,30 +61,7 @@ pub fn handle_connection(
     }
 }
 
-pub fn new_p2p_connection(
-    conn_id: u64,
-    peer_address: String,
-    peer_port: u16,
-    messenger: Sender<MessengerOperations>,
-    receiver: Receiver<P2POperations>,
-) -> Uuid {
+pub fn new_connection(peer_address: String, peer_port: u16) -> TcpStream {
     let peer_info = format!("{}:{}", peer_address, peer_port.to_string());
-    let stream = TcpStream::connect(peer_info).unwrap();
-
-    messenger
-        .send(MessengerOperations::New(NewConnectionMessage {
-            conn_id,
-            socket: stream.try_clone().unwrap(),
-        }))
-        .unwrap();
-
-    send_p2p_handshake(
-        conn_id,
-        peer_address.clone(),
-        peer_port,
-        messenger,
-        receiver,
-    );
-
-    Uuid::new_v4()
+    TcpStream::connect(peer_info).unwrap()
 }

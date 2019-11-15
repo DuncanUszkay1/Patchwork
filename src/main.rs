@@ -20,7 +20,6 @@ fn main() {
     let (messenger_sender, messenger_receiver) = channel();
     let (keep_alive_sender, keep_alive_receiver) = channel();
     let (player_state_sender, player_state_receiver) = channel();
-    let (p2p_state_sender, p2p_state_receiver) = channel();
 
     thread::spawn(move || start_messenger(messenger_receiver, keep_alive_sender));
 
@@ -30,9 +29,9 @@ fn main() {
     let messenger_clone = messenger_sender.clone();
     thread::spawn(move || start_keep_alive(keep_alive_receiver, messenger_clone));
 
-    server::listen(
-        messenger_sender.clone(),
-        player_state_sender.clone(),
-        p2p_state_receiver,
-    );
+    let peer_ip_addr = String::from("127.0.0.1");
+    let peer_port = 8080;
+    peer_conn_protocol::send_p2p_handshake(0, peer_ip_addr, peer_port, messenger_sender.clone());
+
+    server::listen(messenger_sender.clone(), player_state_sender.clone());
 }

@@ -15,12 +15,10 @@ pub fn route_packet(
     conn_id: u64,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
-    mut peer_map: &mut HashMap::<u64, String>, 
-    mut next_peer_id:u64,
 ) {
     let st = Status::value(*state);
     match st {
-        Status::Handshake => handshake_init::init_handshake(p, state, &mut peer_map, next_peer_id),
+        Status::Handshake => handshake_init::init_handshake(p, state),
         Status::ClientPing => client_ping_init::init_client_ping(p, conn_id, messenger),
         Status::Login => login_init::init_login(p, state, conn_id, messenger, player_state),
         Status::Play => (),

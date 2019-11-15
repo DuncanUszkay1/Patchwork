@@ -6,7 +6,6 @@ use super::initiation_protocols::{
 use super::messenger::MessengerOperations;
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
-use std::collections::HashMap;
 
 // Routes the packet to the corresponding service according to the connection state
 pub fn route_packet(

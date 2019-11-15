@@ -3,15 +3,14 @@ mod messenger;
 #[macro_use]
 mod packet_macros;
 mod game_state;
-mod peer_conn_protocol;
 mod initiation_protocols;
 mod keep_alive;
 mod minecraft_protocol;
 mod packet;
 mod packet_router;
+mod peer_conn_protocol;
 mod server;
 use game_state::player::start_player_state;
-use peer_conn_protocol::start_p2p_state;
 use keep_alive::start_keep_alive;
 use messenger::start_messenger;
 use std::sync::mpsc::channel;
@@ -31,8 +30,9 @@ fn main() {
     let messenger_clone = messenger_sender.clone();
     thread::spawn(move || start_keep_alive(keep_alive_receiver, messenger_clone));
 
-    let messenger_clone = messenger_sender.clone();
-    thread::spawn(move || start_p2p_state(p2p_state_receiver, messenger_clone));
-
-    server::listen(messenger_sender.clone(), player_state_sender.clone());
+    server::listen(
+        messenger_sender.clone(),
+        player_state_sender.clone(),
+        p2p_state_receiver,
+    );
 }

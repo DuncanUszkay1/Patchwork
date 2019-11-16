@@ -1,6 +1,6 @@
 use super::packet::Packet;
 
-// Called upon handshake between two servers
+// Called upon handshake
 pub fn init_handshake(p: Packet, state: &mut u64) {
     println!("Handshake packet: {:?}", p);
 

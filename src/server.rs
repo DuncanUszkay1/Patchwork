@@ -60,3 +60,8 @@ pub fn handle_connection(
         }
     }
 }
+
+pub fn new_connection(peer_address: String, peer_port: u16) -> TcpStream {
+    let peer_info = format!("{}:{}", peer_address, peer_port.to_string());
+    TcpStream::connect(peer_info).unwrap()
+}

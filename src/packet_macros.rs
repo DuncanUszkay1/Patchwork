@@ -100,6 +100,9 @@ macro_rules! mc_to_rust_datatype {
     (UShort) => {
         u16
     };
+    (Short) => {
+        i16
+    };
     (Long) => {
         i64
     };
@@ -145,6 +148,9 @@ macro_rules! read_packet_field {
     ($stream:ident, UShort) => {
         $stream.read_unsigned_short()
     };
+    ($stream:ident, Short) => {
+        $stream.read_short()
+    };
     ($stream:ident, Long) => {
         $stream.read_long()
     };
@@ -186,6 +192,9 @@ macro_rules! write_packet_field {
     };
     ($stream:ident, $value:expr, UShort) => {
         $stream.write_unsigned_short($value)
+    };
+    ($stream:ident, $value:expr, Short) => {
+        $stream.write_short($value)
     };
     ($stream:ident, $value:expr, Long) => {
         $stream.write_long($value)

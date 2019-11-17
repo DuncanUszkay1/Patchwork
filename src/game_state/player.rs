@@ -1,5 +1,5 @@
-use super::messenger::{MessengerOperations, SendPacketMessage};
-use super::packet::{Packet, PlayerInfo, SpawnPlayer};
+use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
+use super::packet::{EntityLookAndMove, Packet, PlayerInfo, SpawnPlayer};
 use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub enum PlayerStateOperations {
     New(NewPlayerMessage),
     Report(ReportMessage),
+    Move(PlayerMovementMessage),
 }
 
 #[derive(Debug, Clone)]
@@ -15,6 +16,34 @@ pub struct Player {
     pub conn_id: u64,
     pub uuid: Uuid,
     pub name: String,
+    pub position: Position,
+}
+
+//This probably belongs at an entity level, but since we don't have a real concept of entities yet
+//this'll do
+//Ignoring angle since we haven't implemented that datatype just yet
+#[derive(Debug, Clone)]
+pub struct Position {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct PositionDelta {
+    pub x: i16,
+    pub y: i16,
+    pub z: i16,
+}
+
+impl PositionDelta {
+    pub fn new(old_position: Position, new_position: Position) -> PositionDelta {
+        PositionDelta {
+            x: ((new_position.x * 32.0 - old_position.x * 32.0) * 128.0) as i16,
+            y: ((new_position.y * 32.0 - old_position.y * 32.0) * 128.0) as i16,
+            z: ((new_position.z * 32.0 - old_position.z * 32.0) * 128.0) as i16,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -28,6 +57,12 @@ pub struct ReportMessage {
     pub conn_id: u64,
 }
 
+#[derive(Debug)]
+pub struct PlayerMovementMessage {
+    pub conn_id: u64,
+    pub new_position: Position,
+}
+
 pub fn start_player_state(
     receiver: Receiver<PlayerStateOperations>,
     messenger: Sender<MessengerOperations>,
@@ -38,6 +73,27 @@ pub fn start_player_state(
         match msg {
             PlayerStateOperations::New(msg) => {
                 players.insert(msg.conn_id, msg.player);
+            }
+            PlayerStateOperations::Move(msg) => {
+                let player = players.get(&msg.conn_id).unwrap();
+                let mut player_clone = player.clone();
+                let position_delta =
+                    PositionDelta::new(player_clone.position, msg.new_position.clone());
+                broadcast_packet!(
+                    messenger,
+                    Packet::EntityLookAndMove(EntityLookAndMove {
+                        entity_id: player_clone.conn_id,
+                        delta_x: position_delta.x,
+                        delta_y: position_delta.y,
+                        delta_z: position_delta.z,
+                        yaw: 0,
+                        pitch: 0,
+                        on_ground: false,
+                    })
+                )
+                .unwrap();
+                player_clone.position = msg.new_position;
+                players.insert(msg.conn_id, player_clone);
             }
             PlayerStateOperations::Report(msg) => {
                 players.values().for_each(|player| {
@@ -63,9 +119,9 @@ pub fn start_player_state(
                         Packet::SpawnPlayer(SpawnPlayer {
                             entity_id: player.conn_id,
                             uuid: player_clone.uuid.as_u128(),
-                            x: 0.0,
-                            y: 0.0,
-                            z: 0.0,
+                            x: player_clone.position.x,
+                            y: player_clone.position.y,
+                            z: player_clone.position.z,
                             yaw: 0,
                             pitch: 0,
                             entity_metadata_terminator: 0xff,

@@ -5,6 +5,7 @@ use std::io::{Error, Read, Write};
 
 pub trait MinecraftProtocolReader {
     fn read_unsigned_short(&mut self) -> u16;
+    fn read_short(&mut self) -> i16;
     fn read_var_int(&mut self) -> u64;
     fn read_long(&mut self) -> i64;
     fn read_string(&mut self) -> String;
@@ -22,6 +23,7 @@ pub trait MinecraftProtocolReader {
 pub trait MinecraftProtocolWriter {
     fn write_long(&mut self, v: i64);
     fn write_unsigned_short(&mut self, v: u16);
+    fn write_short(&mut self, v: i16);
     fn write_var_int(&mut self, v: u64);
     fn write_string(&mut self, v: String);
     fn write_u_128(&mut self, v: u128);
@@ -109,6 +111,10 @@ impl<T: Read> MinecraftProtocolReader for T {
         self.read_u16::<BigEndian>().unwrap()
     }
 
+    fn read_short(&mut self) -> i16 {
+        self.read_i16::<BigEndian>().unwrap()
+    }
+
     fn read_string(&mut self) -> String {
         let size = self.read_var_int();
 
@@ -170,8 +176,12 @@ impl<T: Write> MinecraftProtocolWriter for T {
         write_var_int(self, v)
     }
 
-    fn write_unsigned_short(&mut self, _v: u16) {
-        unimplemented!()
+    fn write_unsigned_short(&mut self, v: u16) {
+        self.write_u16::<BigEndian>(v).unwrap()
+    }
+
+    fn write_short(&mut self, v: i16) {
+        self.write_i16::<BigEndian>(v).unwrap()
     }
 
     fn write_string(&mut self, v: String) {

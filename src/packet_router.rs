@@ -1,4 +1,5 @@
 use super::game_state::player::PlayerStateOperations;
+use super::gameplay_router;
 use super::initiation_protocols::{
     border_cross_login_init, client_ping_init, handshake_init, in_peer_sub_init, login_init,
     out_peer_sub_init,
@@ -20,7 +21,7 @@ pub fn route_packet(
         Status::Handshake => handshake_init::init_handshake(p, state),
         Status::ClientPing => client_ping_init::init_client_ping(p, conn_id, messenger),
         Status::Login => login_init::init_login(p, state, conn_id, messenger, player_state),
-        Status::Play => (),
+        Status::Play => gameplay_router::route_packet(p, conn_id, player_state),
         Status::BorderCrossLogin => border_cross_login_init::init_border_cross_login(p, state),
         Status::InPeerSub => in_peer_sub_init::init_incoming_peer_sub(p, state),
         Status::OutPeerSub => out_peer_sub_init::init_outgoing_peer_sub(p, state),

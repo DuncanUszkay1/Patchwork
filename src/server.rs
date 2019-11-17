@@ -2,6 +2,8 @@ use super::minecraft_protocol::read_var_int;
 
 use super::packet::read;
 use super::packet_router;
+use std::env;
+use std::io;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
@@ -11,7 +13,7 @@ use super::messenger::{MessengerOperations, NewConnectionMessage};
 use std::sync::mpsc::Sender;
 
 pub fn listen(messenger: Sender<MessengerOperations>, player_state: Sender<PlayerStateOperations>) {
-    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", env::var("PORT").unwrap())).unwrap();
 
     let mut next_conn_id = 1;
 
@@ -35,10 +37,11 @@ pub fn handle_connection(
     player_state: Sender<PlayerStateOperations>,
 ) {
     let mut state = 0;
+    let stream_clone = stream.try_clone().unwrap();
     messenger
         .send(MessengerOperations::New(NewConnectionMessage {
             conn_id,
-            socket: stream.try_clone().unwrap(),
+            socket: stream_clone,
         }))
         .unwrap();
     loop {
@@ -61,7 +64,7 @@ pub fn handle_connection(
     }
 }
 
-pub fn new_connection(peer_address: String, peer_port: u16) -> TcpStream {
+pub fn new_connection(peer_address: String, peer_port: u16) -> Result<TcpStream, io::Error> {
     let peer_info = format!("{}:{}", peer_address, peer_port.to_string());
-    TcpStream::connect(peer_info).unwrap()
+    TcpStream::connect(peer_info)
 }

@@ -1,5 +1,7 @@
 use super::super::minecraft_protocol::ChunkSection;
-use super::game_state::player::{NewPlayerMessage, Player, PlayerStateOperations, ReportMessage};
+use super::game_state::player::{
+    NewPlayerMessage, Player, PlayerStateOperations, Position, ReportMessage,
+};
 use super::messenger::{MessengerOperations, SendPacketMessage};
 use super::packet;
 use super::packet::Packet;
@@ -36,25 +38,18 @@ fn confirm_login(
         conn_id,
         uuid: Uuid::new_v4(),
         name: login_start.username,
+        position: Position {
+            x: 5.0,
+            y: 16.0,
+            z: 5.0,
+        },
     };
 
     //protocol
     login_success(conn_id, messenger.clone(), player.clone());
     join_game(conn_id, messenger.clone());
-    set_position(conn_id, messenger.clone());
+    set_position(conn_id, messenger.clone(), player.clone());
     temp_send_block_data(conn_id, messenger.clone());
-
-    //add a fake player for testing purposes
-    player_state
-        .send(PlayerStateOperations::New(NewPlayerMessage {
-            conn_id: conn_id + 1,
-            player: Player {
-                conn_id: conn_id + 1,
-                uuid: Uuid::new_v4(),
-                name: String::from("herobrine"),
-            },
-        }))
-        .unwrap();
 
     //report current state to player (soon to be in it's own component for reuse)
     //the only state we keep right now is players
@@ -92,12 +87,12 @@ fn join_game(conn_id: u64, messenger: Sender<MessengerOperations>) {
     send_packet!(messenger, conn_id, Packet::JoinGame(join_game)).unwrap();
 }
 
-fn set_position(conn_id: u64, messenger: Sender<MessengerOperations>) {
+fn set_position(conn_id: u64, messenger: Sender<MessengerOperations>, player: Player) {
     println!("Seeting player's position and camera ...");
-    let player_pos_and_look = packet::PlayerPositionAndLook {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
+    let player_pos_and_look = packet::ClientboundPlayerPositionAndLook {
+        x: player.position.x,
+        y: player.position.y,
+        z: player.position.z,
         yaw: 0.0,
         pitch: 0.0,
         flags: 0,
@@ -106,7 +101,7 @@ fn set_position(conn_id: u64, messenger: Sender<MessengerOperations>) {
     send_packet!(
         messenger,
         conn_id,
-        Packet::PlayerPositionAndLook(player_pos_and_look)
+        Packet::ClientboundPlayerPositionAndLook(player_pos_and_look)
     )
     .unwrap();
 }

@@ -13,14 +13,28 @@ macro_rules! send_packet {
     };
 }
 
+macro_rules! broadcast_packet {
+    ($messenger:expr, $packet:expr) => {
+        $messenger.send(MessengerOperations::Broadcast(BroadcastPacketMessage {
+            packet: $packet,
+        }))
+    };
+}
+
 pub enum MessengerOperations {
     Send(SendPacketMessage),
+    Broadcast(BroadcastPacketMessage),
     New(NewConnectionMessage),
 }
 
 #[derive(Debug)]
 pub struct SendPacketMessage {
     pub conn_id: u64,
+    pub packet: Packet,
+}
+
+#[derive(Debug)]
+pub struct BroadcastPacketMessage {
     pub packet: Packet,
 }
 
@@ -47,6 +61,13 @@ pub fn start_messenger(
                     println!("messenger.rs failed to find the conn id {:?}", msg.conn_id);
                 }
             },
+            MessengerOperations::Broadcast(msg) => {
+                connection_map.values().for_each(|socket| {
+                    let mut socket_clone = socket.try_clone().unwrap();
+                    let packet_clone = msg.packet.clone();
+                    write(&mut socket_clone, packet_clone);
+                });
+            }
             MessengerOperations::New(msg) => {
                 connection_map.insert(msg.conn_id, msg.socket);
                 keep_alive_sender

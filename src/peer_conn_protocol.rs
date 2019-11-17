@@ -2,6 +2,7 @@ use super::messenger::{MessengerOperations, NewConnectionMessage, SendPacketMess
 use super::packet::{Handshake, Packet};
 use super::server;
 
+use std::io;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
@@ -10,8 +11,8 @@ pub fn send_p2p_handshake(
     peer_address: String,
     peer_port: u16,
     messenger: Sender<MessengerOperations>,
-) -> Uuid {
-    let stream = server::new_connection(peer_address.clone(), peer_port);
+) -> Result<Uuid, io::Error> {
+    let stream = server::new_connection(peer_address.clone(), peer_port)?;
     messenger
         .send(MessengerOperations::New(NewConnectionMessage {
             conn_id,
@@ -31,5 +32,5 @@ pub fn send_p2p_handshake(
     )
     .unwrap();
 
-    Uuid::new_v4()
+    Ok(Uuid::new_v4())
 }

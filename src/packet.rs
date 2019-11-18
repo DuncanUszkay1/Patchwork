@@ -22,6 +22,30 @@ packet_boilerplate!(
     (1, Ping, 1, [(payload, Long)]),
     (2, LoginStart, 0, [(username, String)]),
     (3, KeepAlive, 0x21, [(id, Long)]),
+    (
+        3,
+        PlayerPosition,
+        0x10,
+        [
+            (x, Double),
+            (feet_y, Double),
+            (z, Double),
+            (on_ground, Boolean)
+        ]
+    ),
+    (
+        3,
+        PlayerPositionAndLook,
+        0x11,
+        [
+            (x, Double),
+            (feet_y, Double),
+            (z, Double),
+            (yaw, Float),
+            (pitch, Float),
+            (on_ground, Boolean)
+        ]
+    ),
     (99, Pong, 1, [(payload, Long)]),
     (99, StatusResponse, 0, [(json_response, String)]),
     (99, LoginSuccess, 2, [(uuid, String), (username, String)]),
@@ -41,7 +65,7 @@ packet_boilerplate!(
     ),
     (
         99,
-        PlayerPositionAndLook,
+        ClientboundPlayerPositionAndLook,
         0x32,
         [
             (x, Double),
@@ -96,6 +120,20 @@ packet_boilerplate!(
             (yaw, UByte), // represents angle * (360/256). Might want to eventually make this its own type
             (pitch, UByte), // for now lets just set it to 0
             (entity_metadata_terminator, UByte)  // always 0xff until we implement entity metadata
+        ]
+    ),
+    (
+        99,
+        EntityLookAndMove,
+        0x29,
+        [
+            (entity_id, VarInt),
+            (delta_x, Short),
+            (delta_y, Short),
+            (delta_z, Short),
+            (yaw, UByte),
+            (pitch, UByte),
+            (on_ground, Boolean)
         ]
     )
 );

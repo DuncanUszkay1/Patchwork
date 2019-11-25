@@ -14,9 +14,12 @@ mod server;
 use game_state::player::start_player_state;
 use keep_alive::start_keep_alive;
 use messenger::start_messenger;
+use peer_conn_protocol::PeerManager;
 use std::env;
 use std::sync::mpsc::channel;
 use std::thread;
+
+
 
 fn main() {
     let (messenger_sender, messenger_receiver) = channel();
@@ -33,8 +36,8 @@ fn main() {
 
     let peer_ip_addr = String::from("127.0.0.1");
     let peer_port = env::var("PEER_PORT").unwrap().parse::<u16>().unwrap();
-    peer_conn_protocol::send_p2p_handshake(0, peer_ip_addr, peer_port, messenger_sender.clone())
-        .ok();
 
+    let mut peer_manager = PeerManager::new();
+    peer_manager.connect_to_peer(0, peer_ip_addr, peer_port, messenger_sender.clone());
     server::listen(messenger_sender.clone(), player_state_sender.clone());
 }

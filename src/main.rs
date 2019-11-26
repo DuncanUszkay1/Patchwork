@@ -33,8 +33,7 @@ fn main() {
 
     let peer_ip_addr = String::from("127.0.0.1");
     let peer_port = env::var("PEER_PORT").unwrap().parse::<u16>().unwrap();
-    peer_conn_protocol::send_p2p_handshake(0, peer_ip_addr, peer_port, messenger_sender.clone())
-        .ok();
+    peer_conn_protocol::send_p2p_handshake(peer_ip_addr, peer_port, messenger_sender.clone()).ok();
 
     server::listen(messenger_sender.clone(), player_state_sender.clone());
 }

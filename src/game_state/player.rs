@@ -13,7 +13,7 @@ pub enum PlayerStateOperations {
 
 #[derive(Debug, Clone)]
 pub struct Player {
-    pub conn_id: u64,
+    pub conn_id: Uuid,
     pub uuid: Uuid,
     pub name: String,
     pub position: Position,
@@ -48,18 +48,18 @@ impl PositionDelta {
 
 #[derive(Debug)]
 pub struct NewPlayerMessage {
-    pub conn_id: u64,
+    pub conn_id: Uuid,
     pub player: Player,
 }
 
 #[derive(Debug)]
 pub struct ReportMessage {
-    pub conn_id: u64,
+    pub conn_id: Uuid,
 }
 
 #[derive(Debug)]
 pub struct PlayerMovementMessage {
-    pub conn_id: u64,
+    pub conn_id: Uuid,
     pub new_position: Position,
 }
 
@@ -67,7 +67,7 @@ pub fn start_player_state(
     receiver: Receiver<PlayerStateOperations>,
     messenger: Sender<MessengerOperations>,
 ) {
-    let mut players = HashMap::<u64, Player>::new();
+    let mut players = HashMap::<Uuid, Player>::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {
@@ -82,7 +82,7 @@ pub fn start_player_state(
                 broadcast_packet!(
                     messenger,
                     Packet::EntityLookAndMove(EntityLookAndMove {
-                        entity_id: player_clone.conn_id,
+                        entity_id: player_clone.conn_id.as_u128() as u64,
                         delta_x: position_delta.x,
                         delta_y: position_delta.y,
                         delta_z: position_delta.z,
@@ -117,7 +117,7 @@ pub fn start_player_state(
                         messenger,
                         msg.conn_id,
                         Packet::SpawnPlayer(SpawnPlayer {
-                            entity_id: player.conn_id,
+                            entity_id: player.conn_id.as_u128() as u64,
                             uuid: player_clone.uuid.as_u128(),
                             x: player_clone.position.x,
                             y: player_clone.position.y,

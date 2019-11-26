@@ -3,6 +3,7 @@ use super::packet::{write, Packet};
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::sync::mpsc::{Receiver, Sender};
+use uuid::Uuid;
 
 macro_rules! send_packet {
     ($messenger:expr, $conn_id:expr, $packet:expr) => {
@@ -29,7 +30,7 @@ pub enum MessengerOperations {
 
 #[derive(Debug)]
 pub struct SendPacketMessage {
-    pub conn_id: u64,
+    pub conn_id: Uuid,
     pub packet: Packet,
 }
 
@@ -40,7 +41,7 @@ pub struct BroadcastPacketMessage {
 
 #[derive(Debug)]
 pub struct NewConnectionMessage {
-    pub conn_id: u64,
+    pub conn_id: Uuid,
     pub socket: TcpStream,
 }
 
@@ -48,7 +49,7 @@ pub fn start_messenger(
     receiver: Receiver<MessengerOperations>,
     keep_alive_sender: Sender<KeepAliveOperations>,
 ) {
-    let mut connection_map = HashMap::<u64, TcpStream>::new();
+    let mut connection_map = HashMap::<Uuid, TcpStream>::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {

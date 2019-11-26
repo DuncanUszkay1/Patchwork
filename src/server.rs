@@ -11,32 +11,29 @@ use std::thread;
 use super::game_state::player::PlayerStateOperations;
 use super::messenger::{MessengerOperations, NewConnectionMessage};
 use std::sync::mpsc::Sender;
+use uuid::Uuid;
 
 pub fn listen(messenger: Sender<MessengerOperations>, player_state: Sender<PlayerStateOperations>) {
     let listener = TcpListener::bind(format!("127.0.0.1:{}", env::var("PORT").unwrap())).unwrap();
-
-    let mut next_conn_id = 1;
 
     for stream in listener.incoming() {
         println!("connection");
         let stream = stream.unwrap();
         let messenger_clone = messenger.clone();
         let player_state_clone = player_state.clone();
-        let conn_id = next_conn_id;
         thread::spawn(move || {
-            handle_connection(stream, conn_id, messenger_clone, player_state_clone);
+            handle_connection(stream, messenger_clone, player_state_clone);
         });
-        next_conn_id += 1;
     }
 }
 
 pub fn handle_connection(
     mut stream: TcpStream,
-    conn_id: u64,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
 ) {
     let mut state = 0;
+    let conn_id = Uuid::new_v4();
     let stream_clone = stream.try_clone().unwrap();
     messenger
         .send(MessengerOperations::New(NewConnectionMessage {

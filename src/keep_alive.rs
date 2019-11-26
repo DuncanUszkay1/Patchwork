@@ -3,6 +3,7 @@ use super::packet::{KeepAlive, Packet};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::sleep;
 use std::time;
+use uuid::Uuid;
 
 const KEEP_ALIVE_PERIOD: u64 = 15;
 const KEEP_ALIVE_VALUE: i64 = 16;
@@ -13,14 +14,14 @@ pub enum KeepAliveOperations {
 
 #[derive(Debug)]
 pub struct NewKeepAliveConnectionMessage {
-    pub conn_id: u64,
+    pub conn_id: Uuid,
 }
 
 pub fn start_keep_alive(
     receiver: Receiver<KeepAliveOperations>,
     messenger: Sender<MessengerOperations>,
 ) {
-    let mut conn_ids: Vec<u64> = Vec::new();
+    let mut conn_ids: Vec<Uuid> = Vec::new();
 
     loop {
         sleep(time::Duration::from_secs(KEEP_ALIVE_PERIOD));

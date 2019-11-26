@@ -12,7 +12,7 @@ use uuid::Uuid;
 pub fn init_login(
     p: Packet,
     state: &mut u64,
-    conn_id: u64,
+    conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
 ) {
@@ -29,7 +29,7 @@ pub fn init_login(
 }
 
 fn confirm_login(
-    conn_id: u64,
+    conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     login_start: packet::LoginStart,
     player_state: Sender<PlayerStateOperations>,
@@ -66,7 +66,7 @@ fn confirm_login(
         .unwrap();
 }
 
-fn login_success(conn_id: u64, messenger: Sender<MessengerOperations>, player: Player) {
+fn login_success(conn_id: Uuid, messenger: Sender<MessengerOperations>, player: Player) {
     let login_success = packet::LoginSuccess {
         uuid: player.uuid.to_hyphenated().to_string(),
         username: player.name,
@@ -74,7 +74,7 @@ fn login_success(conn_id: u64, messenger: Sender<MessengerOperations>, player: P
     send_packet!(messenger, conn_id, Packet::LoginSuccess(login_success)).unwrap();
 }
 
-fn join_game(conn_id: u64, messenger: Sender<MessengerOperations>) {
+fn join_game(conn_id: Uuid, messenger: Sender<MessengerOperations>) {
     let join_game = packet::JoinGame {
         entity_id: 0,
         gamemode: 1,
@@ -87,7 +87,7 @@ fn join_game(conn_id: u64, messenger: Sender<MessengerOperations>) {
     send_packet!(messenger, conn_id, Packet::JoinGame(join_game)).unwrap();
 }
 
-fn set_position(conn_id: u64, messenger: Sender<MessengerOperations>, player: Player) {
+fn set_position(conn_id: Uuid, messenger: Sender<MessengerOperations>, player: Player) {
     println!("Seeting player's position and camera ...");
     let player_pos_and_look = packet::ClientboundPlayerPositionAndLook {
         x: player.position.x,
@@ -106,7 +106,7 @@ fn set_position(conn_id: u64, messenger: Sender<MessengerOperations>, player: Pl
     .unwrap();
 }
 
-fn temp_send_block_data(conn_id: u64, messenger: Sender<MessengerOperations>) {
+fn temp_send_block_data(conn_id: Uuid, messenger: Sender<MessengerOperations>) {
     let chunk_data = packet::ChunkData {
         chunk_x: 0,
         chunk_z: 0,

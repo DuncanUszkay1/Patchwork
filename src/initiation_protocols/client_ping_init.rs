@@ -2,11 +2,12 @@ use super::messenger::{MessengerOperations, SendPacketMessage};
 use super::packet;
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
+use uuid::Uuid;
 
 const FAKE_RESPONSE: &str = "{\"version\": {\"name\": \"1.13.2\",\"protocol\": 404},\"players\": {\"max\": 100,\"online\": 5,\"sample\": [{\"name\": \"thinkofdeath\",\"id\": \"4566e69f-c907-48ee-8d71-d7ba5aa00d20\"}]},\"description\": {\"text\": \"Hello world\"},\"favicon\": \"data:image/png;base64,<data>\"}";
 
 // Called when client pings the server
-pub fn init_client_ping(p: Packet, conn_id: u64, messenger: Sender<MessengerOperations>) {
+pub fn init_client_ping(p: Packet, conn_id: Uuid, messenger: Sender<MessengerOperations>) {
     println!("Ping packet : {:?}", p);
 
     match p.clone() {

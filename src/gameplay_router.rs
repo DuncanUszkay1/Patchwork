@@ -1,8 +1,9 @@
 use super::game_state::player::{PlayerMovementMessage, PlayerStateOperations, Position};
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
+use uuid::Uuid;
 
-pub fn route_packet(p: Packet, conn_id: u64, player_state: Sender<PlayerStateOperations>) {
+pub fn route_packet(p: Packet, conn_id: Uuid, player_state: Sender<PlayerStateOperations>) {
     match p {
         Packet::PlayerPosition(player_position) => {
             player_state

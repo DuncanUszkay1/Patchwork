@@ -80,7 +80,3 @@ pub fn start_messenger(
         }
     }
 }
-
-pub fn get_new_conn_id() -> Uuid {
-    Uuid::new_v4()
-}

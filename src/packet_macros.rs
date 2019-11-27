@@ -10,23 +10,13 @@ macro_rules! packet_boilerplate {
             $($name($name)),*
         }
 
-        pub fn read<S: MinecraftProtocolReader + Read>(stream: &mut S, state: i32, length: i32) -> Packet {
-            //Read the entire packet into a vector first
-            let vec: Vec<u8> = stream
-                .bytes()
-                .take(length as usize)
-                .map(|r: Result<u8, _>| r.expect("packet was smaller than length field indicated!"))
-                .collect();
-            let mut cursor = Cursor::new(vec);
-
-            //Length has already been discarded earlier, so we just need to read the
-            //id in as a varint
-            let id = cursor.read_var_int();
+        pub fn read<S: MinecraftProtocolReader + Read>(stream: &mut S, state: i32) -> Packet {
+            let id = stream.read_var_int();
 
             //call the initializer method of the packet class associated with
             //this state and packet id combination
             match (state,id) {
-                $( ($state, $id) => { Packet::$name($name::new(&mut cursor)) } )*
+                $( ($state, $id) => { Packet::$name($name::new(stream)) } )*
                 _ => {
                     println!("unknown packet state/id {:?}/{:x}", state, id);
                     Packet::Unknown

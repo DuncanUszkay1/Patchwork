@@ -79,7 +79,6 @@ pub fn start_player_state(
                 let mut player_clone = player.clone();
                 let position_delta =
                     PositionDelta::new(player_clone.position, msg.new_position.clone());
-                println!("ayy");
                 broadcast_packet!(
                     messenger,
                     Packet::EntityLookAndMove(EntityLookAndMove {

@@ -1,38 +1,36 @@
 use super::minecraft_protocol::read_var_int;
+use super::messenger::{MessengerOperations, NewConnectionMessage};
 
-use super::packet::read;
-use super::packet_router;
 use std::env;
 use std::io;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
+use std::io::{Cursor, Read};
 
-use super::game_state::player::PlayerStateOperations;
-use super::messenger::{MessengerOperations, NewConnectionMessage};
+use super::packet_processor::{PacketProcessorOperations, InboundPacketMessage};
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-pub fn listen(messenger: Sender<MessengerOperations>, player_state: Sender<PlayerStateOperations>) {
+pub fn listen(inbound_packet_processor: Sender<PacketProcessorOperations>, messenger: Sender<MessengerOperations>) {
     let listener = TcpListener::bind(format!("127.0.0.1:{}", env::var("PORT").unwrap())).unwrap();
 
     for stream in listener.incoming() {
         println!("connection");
         let stream = stream.unwrap();
+        let inbound_packet_processor_clone = inbound_packet_processor.clone();
         let messenger_clone = messenger.clone();
-        let player_state_clone = player_state.clone();
         thread::spawn(move || {
-            handle_connection(stream, messenger_clone, player_state_clone);
+            handle_connection(stream, inbound_packet_processor_clone, messenger_clone);
         });
     }
 }
 
 pub fn handle_connection(
     mut stream: TcpStream,
-    messenger: Sender<MessengerOperations>,
-    player_state: Sender<PlayerStateOperations>,
+    inbound_packet_processor: Sender<PacketProcessorOperations>,
+    messenger: Sender<MessengerOperations>
 ) {
-    let mut state = 0 as i32;
     let conn_id = Uuid::new_v4();
     let stream_clone = stream.try_clone().unwrap();
     messenger
@@ -44,14 +42,17 @@ pub fn handle_connection(
     loop {
         match read_var_int(&mut stream) {
             Ok(length) => {
-                let packet = read(&mut stream, state, length);
-                packet_router::route_packet(
-                    packet,
-                    &mut state,
-                    conn_id,
-                    messenger.clone(),
-                    player_state.clone(),
-                );
+                let vec: Vec<u8> = (&stream)
+                    .bytes()
+                    .take(length as usize)
+                    .map(|r: Result<u8, _>| r.expect("packet was smaller than length field indicated!"))
+                    .collect();
+                let cursor = Cursor::new(vec);
+                inbound_packet_processor
+                    .send(PacketProcessorOperations::Inbound(InboundPacketMessage {
+                        conn_id,
+                        cursor
+                    })).unwrap();
             }
             Err(e) => {
                 println!("conn closed due to {:?}", e);

@@ -12,7 +12,7 @@ use uuid::Uuid;
 // Routes the packet to the corresponding service according to the connection state
 pub fn route_packet(
     p: Packet,
-    state: &mut u64,
+    state: &mut i32,
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
@@ -40,7 +40,7 @@ enum Status {
 }
 
 impl Status {
-    fn value(status: u64) -> Status {
+    fn value(status: i32) -> Status {
         match status {
             0 => Status::Handshake,
             1 => Status::ClientPing,

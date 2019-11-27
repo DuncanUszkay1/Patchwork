@@ -1,7 +1,7 @@
 use super::packet::Packet;
 
 // Called upon handshake
-pub fn init_handshake(p: Packet, state: &mut u64) {
+pub fn init_handshake(p: Packet, state: &mut i32) {
     println!("Handshake packet: {:?}", p);
 
     *state = match p.clone() {

@@ -11,7 +11,7 @@ use uuid::Uuid;
 // Called upon user login
 pub fn init_login(
     p: Packet,
-    state: &mut u64,
+    state: &mut i32,
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,

@@ -6,7 +6,7 @@ use std::io::{Error, Read, Write};
 pub trait MinecraftProtocolReader {
     fn read_unsigned_short(&mut self) -> u16;
     fn read_short(&mut self) -> i16;
-    fn read_var_int(&mut self) -> u64;
+    fn read_var_int(&mut self) -> i32;
     fn read_long(&mut self) -> i64;
     fn read_string(&mut self) -> String;
     fn read_u_128(&mut self) -> u128;
@@ -24,7 +24,7 @@ pub trait MinecraftProtocolWriter {
     fn write_long(&mut self, v: i64);
     fn write_unsigned_short(&mut self, v: u16);
     fn write_short(&mut self, v: i16);
-    fn write_var_int(&mut self, v: u64);
+    fn write_var_int(&mut self, v: i32);
     fn write_string(&mut self, v: String);
     fn write_u_128(&mut self, v: u128);
     fn write_int(&mut self, v: i32);
@@ -40,18 +40,18 @@ pub trait MinecraftProtocolWriter {
 #[derive(Debug, Clone)]
 pub struct ChunkSection {
     pub bits_per_block: u8, //always 14 until we implement palettes
-    pub data_array_length: u64,
+    pub data_array_length: i32,
     pub block_ids: Vec<i32>,   //4096 block ids
     pub block_light: Vec<u64>, //2048 bytes (all 1s)
     pub sky_light: Vec<u64>,   //2048 bytes (all 1s)
 }
 
-pub fn read_var_int<S: Read>(stream: &mut S) -> Result<u64, Error> {
+pub fn read_var_int<S: Read>(stream: &mut S) -> Result<i32, Error> {
     let mut num_read = 0;
-    let mut result: u64 = 0;
+    let mut result: i32 = 0;
 
     loop {
-        let value = u64::from(stream.read_u8()?);
+        let value = i32::from(stream.read_u8()?);
         result |= (value & 0b0111_1111) << (7 * num_read);
         num_read += 1;
         if num_read > 5 {
@@ -83,7 +83,7 @@ pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
     }
 }
 
-pub fn write_var_int<S: Write>(stream: &mut S, v: u64) {
+pub fn write_var_int<S: Write>(stream: &mut S, v: i32) {
     let mut value = v;
     loop {
         let mut temp = value & 0b0111_1111;
@@ -103,7 +103,7 @@ impl<T: Read> MinecraftProtocolReader for T {
         self.read_i64::<BigEndian>().unwrap()
     }
 
-    fn read_var_int(&mut self) -> u64 {
+    fn read_var_int(&mut self) -> i32 {
         read_var_int(self).unwrap()
     }
 
@@ -172,7 +172,7 @@ impl<T: Write> MinecraftProtocolWriter for T {
         self.write_i64::<BigEndian>(v).unwrap();
     }
 
-    fn write_var_int(&mut self, v: u64) {
+    fn write_var_int(&mut self, v: i32) {
         write_var_int(self, v)
     }
 
@@ -186,7 +186,7 @@ impl<T: Write> MinecraftProtocolWriter for T {
 
     fn write_string(&mut self, v: String) {
         let string_bytes = v.into_bytes();
-        self.write_var_int(string_bytes.clone().into_iter().count() as u64);
+        self.write_var_int(string_bytes.clone().into_iter().count() as i32);
         self.write_all(&string_bytes).unwrap();
     }
 

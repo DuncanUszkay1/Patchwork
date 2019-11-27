@@ -79,10 +79,11 @@ pub fn start_player_state(
                 let mut player_clone = player.clone();
                 let position_delta =
                     PositionDelta::new(player_clone.position, msg.new_position.clone());
+                println!("ayy");
                 broadcast_packet!(
                     messenger,
                     Packet::EntityLookAndMove(EntityLookAndMove {
-                        entity_id: player_clone.conn_id.as_u128() as u64,
+                        entity_id: player_clone.conn_id.as_u128() as i32,
                         delta_x: position_delta.x,
                         delta_y: position_delta.y,
                         delta_z: position_delta.z,
@@ -117,7 +118,7 @@ pub fn start_player_state(
                         messenger,
                         msg.conn_id,
                         Packet::SpawnPlayer(SpawnPlayer {
-                            entity_id: player.conn_id.as_u128() as u64,
+                            entity_id: player.conn_id.as_u128() as i32,
                             uuid: player_clone.uuid.as_u128(),
                             x: player_clone.position.x,
                             y: player_clone.position.y,

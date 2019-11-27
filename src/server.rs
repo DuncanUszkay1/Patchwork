@@ -32,7 +32,7 @@ pub fn handle_connection(
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
 ) {
-    let mut state = 0;
+    let mut state = 0 as i32;
     let conn_id = Uuid::new_v4();
     let stream_clone = stream.try_clone().unwrap();
     messenger

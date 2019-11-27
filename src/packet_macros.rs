@@ -10,7 +10,7 @@ macro_rules! packet_boilerplate {
             $($name($name)),*
         }
 
-        pub fn read<S: MinecraftProtocolReader + Read>(stream: &mut S, state: u64, length: u64) -> Packet {
+        pub fn read<S: MinecraftProtocolReader + Read>(stream: &mut S, state: i32, length: i32) -> Packet {
             //Read the entire packet into a vector first
             let vec: Vec<u8> = stream
                 .bytes()
@@ -51,7 +51,7 @@ macro_rules! packet_boilerplate {
 
             //Write the length into a vector
             cursor = Cursor::new(Vec::new());
-            write_var_int(&mut cursor, size as u64);
+            write_var_int(&mut cursor, size as i32);
 
             //combine the length vector with the sizing vector to get
             //the full byte vector of the packet
@@ -82,7 +82,7 @@ macro_rules! packet {
         #[derive(Debug, Clone)]
         pub struct $name { $(pub $fieldname: mc_to_rust_datatype!($datatype)),* }
         impl $name {
-            const ID: u64 = $id;
+            const ID: i32 = $id;
             pub fn new<S: MinecraftProtocolReader>(stream: &mut S) -> $name {
                 $name { $( $fieldname: read_packet_field!(stream, $datatype) ),* }
             }
@@ -95,7 +95,7 @@ macro_rules! packet {
 
 macro_rules! mc_to_rust_datatype {
     (VarInt) => {
-        u64
+        i32
     };
     (UShort) => {
         u16

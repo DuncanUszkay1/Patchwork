@@ -11,7 +11,6 @@ use uuid::Uuid;
 // Called upon user login
 pub fn init_login(
     p: Packet,
-    state: &mut i32,
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
@@ -19,7 +18,6 @@ pub fn init_login(
     println!("Login protocol initiated :{:?}", p);
     match p.clone() {
         Packet::LoginStart(login_start) => {
-            *state = 3;
             confirm_login(conn_id, messenger, login_start, player_state);
         }
         _ => {

@@ -1,18 +1,21 @@
-use super::minecraft_protocol::read_var_int;
 use super::messenger::{MessengerOperations, NewConnectionMessage};
+use super::minecraft_protocol::read_var_int;
 
 use std::env;
 use std::io;
+use std::io::{Cursor, Read};
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::thread;
-use std::io::{Cursor, Read};
 
-use super::packet_processor::{PacketProcessorOperations, InboundPacketMessage};
+use super::packet_processor::{InboundPacketMessage, PacketProcessorOperations};
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-pub fn listen(inbound_packet_processor: Sender<PacketProcessorOperations>, messenger: Sender<MessengerOperations>) {
+pub fn listen(
+    inbound_packet_processor: Sender<PacketProcessorOperations>,
+    messenger: Sender<MessengerOperations>,
+) {
     let listener = TcpListener::bind(format!("127.0.0.1:{}", env::var("PORT").unwrap())).unwrap();
 
     for stream in listener.incoming() {
@@ -29,7 +32,7 @@ pub fn listen(inbound_packet_processor: Sender<PacketProcessorOperations>, messe
 pub fn handle_connection(
     mut stream: TcpStream,
     inbound_packet_processor: Sender<PacketProcessorOperations>,
-    messenger: Sender<MessengerOperations>
+    messenger: Sender<MessengerOperations>,
 ) {
     let conn_id = Uuid::new_v4();
     let stream_clone = stream.try_clone().unwrap();
@@ -45,14 +48,17 @@ pub fn handle_connection(
                 let vec: Vec<u8> = (&stream)
                     .bytes()
                     .take(length as usize)
-                    .map(|r: Result<u8, _>| r.expect("packet was smaller than length field indicated!"))
+                    .map(|r: Result<u8, _>| {
+                        r.expect("packet was smaller than length field indicated!")
+                    })
                     .collect();
                 let cursor = Cursor::new(vec);
                 inbound_packet_processor
                     .send(PacketProcessorOperations::Inbound(InboundPacketMessage {
                         conn_id,
-                        cursor
-                    })).unwrap();
+                        cursor,
+                    }))
+                    .expect("Inbound packet processor crashed");
             }
             Err(e) => {
                 println!("conn closed due to {:?}", e);

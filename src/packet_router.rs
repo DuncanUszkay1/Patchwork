@@ -6,26 +6,45 @@ use super::initiation_protocols::{
 };
 use super::messenger::MessengerOperations;
 use super::packet::Packet;
+use super::packet_processor::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
 // Routes the packet to the corresponding service according to the connection state
 pub fn route_packet(
-    p: Packet,
-    state: &mut i32,
+    packet: Packet,
+    state: i32,
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
-) {
-    let st = Status::value(*state);
+) -> TranslationUpdates {
+    let st = Status::value(state);
     match st {
-        Status::Handshake => handshake_init::init_handshake(p, state),
-        Status::ClientPing => client_ping_init::init_client_ping(p, conn_id, messenger),
-        Status::Login => login_init::init_login(p, state, conn_id, messenger, player_state),
-        Status::Play => gameplay_router::route_packet(p, conn_id, player_state),
-        Status::BorderCrossLogin => border_cross_login_init::init_border_cross_login(p, state),
-        Status::InPeerSub => in_peer_sub_init::init_incoming_peer_sub(p, state),
-        Status::OutPeerSub => out_peer_sub_init::init_outgoing_peer_sub(p, state),
+        Status::Handshake => TranslationUpdates::State(handshake_init::init_handshake(packet)),
+        Status::Login => {
+            login_init::init_login(packet, conn_id, messenger, player_state);
+            TranslationUpdates::State(3)
+        }
+        Status::ClientPing => {
+            client_ping_init::init_client_ping(packet, conn_id, messenger);
+            TranslationUpdates::NoChange
+        }
+        Status::Play => {
+            gameplay_router::route_packet(packet, conn_id, player_state);
+            TranslationUpdates::NoChange
+        }
+        Status::BorderCrossLogin => {
+            border_cross_login_init::init_border_cross_login(packet);
+            TranslationUpdates::NoChange
+        }
+        Status::InPeerSub => {
+            in_peer_sub_init::init_incoming_peer_sub(packet);
+            TranslationUpdates::NoChange
+        }
+        Status::OutPeerSub => {
+            out_peer_sub_init::init_outgoing_peer_sub(packet);
+            TranslationUpdates::NoChange
+        }
     }
 }
 

@@ -1,14 +1,9 @@
 use super::packet::Packet;
 
 // Called upon handshake
-pub fn init_handshake(p: Packet, state: &mut i32) {
-    println!("Handshake packet: {:?}", p);
-
-    *state = match p.clone() {
+pub fn init_handshake(p: Packet) -> i32 {
+    match p.clone() {
         Packet::Handshake(handshake) => handshake.next_state,
-        _ => {
-            println!("Invalid packet (handshake)");
-            *state
-        }
-    };
+        _ => panic!("Invalid packet (handshake)"),
+    }
 }

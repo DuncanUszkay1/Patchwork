@@ -4,6 +4,6 @@ use super::packet;
 use super::packet::{read, write, Packet};
 
 // Called when a server requests a peer subscription
-pub fn init_incoming_peer_sub(p: Packet, state: &mut i32) {
+pub fn init_incoming_peer_sub(p: Packet) {
     unimplemented!()
 }

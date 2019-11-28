@@ -119,7 +119,8 @@ impl<T: Read> MinecraftProtocolReader for T {
         let size = self.read_var_int();
 
         let mut buffer = vec![0; size as usize];
-        self.read_exact(&mut buffer).unwrap();
+        self.read_exact(&mut buffer)
+            .expect("didn't find enough characters");
         String::from_utf8(buffer).unwrap()
     }
 

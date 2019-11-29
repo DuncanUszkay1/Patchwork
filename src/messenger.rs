@@ -25,6 +25,7 @@ macro_rules! broadcast_packet {
 pub enum MessengerOperations {
     Send(SendPacketMessage),
     Broadcast(BroadcastPacketMessage),
+    Subscribe(SubscribeMessage),
     New(NewConnectionMessage),
 }
 
@@ -32,6 +33,11 @@ pub enum MessengerOperations {
 pub struct SendPacketMessage {
     pub conn_id: Uuid,
     pub packet: Packet,
+}
+
+#[derive(Debug)]
+pub struct SubscribeMessage {
+    pub conn_id: Uuid,
 }
 
 #[derive(Debug)]
@@ -50,6 +56,7 @@ pub fn start_messenger(
     keep_alive_sender: Sender<KeepAliveOperations>,
 ) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();
+    let mut broadcast_list = Vec::<Uuid>::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {
@@ -63,12 +70,16 @@ pub fn start_messenger(
                 }
             },
             MessengerOperations::Broadcast(msg) => {
-                connection_map.values().for_each(|socket| {
-                    let mut socket_clone = socket.try_clone().unwrap();
-                    let packet_clone = msg.packet.clone();
-                    write(&mut socket_clone, packet_clone);
+                (&broadcast_list).iter().for_each(|conn_id| {
+                    //println!("broadcasting to {:?}", conn_id);
+                    if let Some(socket) = connection_map.get(&conn_id) {
+                        let mut socket_clone = socket.try_clone().unwrap();
+                        let packet_clone = msg.packet.clone();
+                        write(&mut socket_clone, packet_clone);
+                    }
                 });
             }
+            MessengerOperations::Subscribe(msg) => broadcast_list.push(msg.conn_id),
             MessengerOperations::New(msg) => {
                 connection_map.insert(msg.conn_id, msg.socket);
                 keep_alive_sender

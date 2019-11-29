@@ -34,29 +34,33 @@ fn main() {
     thread::spawn(move || start_player_state(player_state_receiver, messenger_clone));
 
     let messenger_clone = messenger_sender.clone();
-    thread::spawn(move || start_patchwork_state(patchwork_state_receiver, messenger_clone));
+    let inbound_packet_processor_sender_clone = inbound_packet_processor_sender.clone();
+    thread::spawn(move || {
+        start_patchwork_state(
+            patchwork_state_receiver,
+            messenger_clone,
+            inbound_packet_processor_sender_clone,
+        )
+    });
 
     let messenger_clone = messenger_sender.clone();
     thread::spawn(move || start_keep_alive(keep_alive_receiver, messenger_clone));
 
     let messenger_clone = messenger_sender.clone();
     let player_state_clone = player_state_sender.clone();
+    let patchwork_state_clone = patchwork_state_sender.clone();
     thread::spawn(move || {
         start_inbound(
             inbound_packet_processor_receiver,
             messenger_clone,
             player_state_clone,
+            patchwork_state_clone,
         )
     });
 
     let peer_ip_addr = String::from("127.0.0.1");
     let peer_port = env::var("PEER_PORT").unwrap().parse::<u16>().unwrap();
-    peer_conn_protocol::send_p2p_handshake(
-        peer_ip_addr,
-        peer_port,
-        messenger_sender.clone(),
-        patchwork_state_sender.clone(),
-    );
+    peer_conn_protocol::send_p2p_handshake(peer_ip_addr, peer_port, patchwork_state_sender.clone());
 
     server::listen(
         inbound_packet_processor_sender.clone(),

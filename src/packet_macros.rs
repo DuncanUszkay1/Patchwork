@@ -1,5 +1,5 @@
 macro_rules! packet_boilerplate {
-    ( $( ( $state:expr, $name:ident, $id:expr, [
+    ( $( ( $state:pat, $name:ident, $id:expr, [
      $( ($fieldname:ident, $datatype:ident)),*
     ])),*) => (
         //Create an enum with a struct variant for each packet we've defined
@@ -18,7 +18,7 @@ macro_rules! packet_boilerplate {
             match (state,id) {
                 $( ($state, $id) => { Packet::$name($name::new(stream)) } )*
                 _ => {
-                    println!("unknown packet state/id {:?}/{:x}", state, id);
+                    //println!("unknown packet state/id {:?}/{:x}", state, id);
                     Packet::Unknown
                 }
             }
@@ -32,7 +32,7 @@ macro_rules! packet_boilerplate {
                     write_var_int(&mut cursor, $name::ID);
                     packet.write(&mut cursor)
                 })*
-                _ => { panic!("I don't know how to write this packet") }
+                _ => { panic!("I don't know how to write this packet {:?}", packet) }
             }
 
             //Measure what we've written so far to determine packet length
@@ -53,7 +53,7 @@ macro_rules! packet_boilerplate {
         }
 
         //Define the packet struct
-        $(packet!{$state, $name, $id, [ $( ($fieldname, $datatype)),*]})*
+        $(packet!{$name, $id, [ $( ($fieldname, $datatype)),*]})*
     )
 }
 
@@ -68,7 +68,7 @@ macro_rules! packet_boilerplate {
 //  }
 //}
 macro_rules! packet {
-    ($state:expr, $name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident)),* ]) => (
+    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident)),* ]) => (
         #[derive(Debug, Clone)]
         pub struct $name { $(pub $fieldname: mc_to_rust_datatype!($datatype)),* }
         impl $name {

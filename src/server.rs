@@ -19,12 +19,18 @@ pub fn listen(
     let listener = TcpListener::bind(format!("127.0.0.1:{}", env::var("PORT").unwrap())).unwrap();
 
     for stream in listener.incoming() {
-        println!("connection");
+        //println!("connection");
         let stream = stream.unwrap();
         let inbound_packet_processor_clone = inbound_packet_processor.clone();
         let messenger_clone = messenger.clone();
+        let conn_id = Uuid::new_v4();
         thread::spawn(move || {
-            handle_connection(stream, inbound_packet_processor_clone, messenger_clone);
+            handle_connection(
+                stream,
+                inbound_packet_processor_clone,
+                messenger_clone,
+                conn_id,
+            );
         });
     }
 }
@@ -33,8 +39,8 @@ pub fn handle_connection(
     mut stream: TcpStream,
     inbound_packet_processor: Sender<PacketProcessorOperations>,
     messenger: Sender<MessengerOperations>,
+    conn_id: Uuid,
 ) {
-    let conn_id = Uuid::new_v4();
     let stream_clone = stream.try_clone().unwrap();
     messenger
         .send(MessengerOperations::New(NewConnectionMessage {
@@ -61,7 +67,12 @@ pub fn handle_connection(
                     .expect("Inbound packet processor crashed");
             }
             Err(e) => {
-                println!("conn closed due to {:?}", e);
+                match e.kind() {
+                    io::ErrorKind::UnexpectedEof => {}
+                    _ => {
+                        println!("conn closed due to {:?}", e);
+                    }
+                };
                 break;
             }
         }

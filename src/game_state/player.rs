@@ -1,6 +1,7 @@
 use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
 use super::packet::{EntityLookAndMove, Packet, PlayerInfo, SpawnPlayer};
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -17,6 +18,7 @@ pub struct Player {
     pub uuid: Uuid,
     pub name: String,
     pub position: Position,
+    pub entity_id: i32,
 }
 
 //This probably belongs at an entity level, but since we don't have a real concept of entities yet
@@ -72,7 +74,9 @@ pub fn start_player_state(
     while let Ok(msg) = receiver.recv() {
         match msg {
             PlayerStateOperations::New(msg) => {
-                players.insert(msg.conn_id, msg.player);
+                let mut player = msg.player;
+                player.entity_id = players.len().try_into().expect("too many players");
+                players.insert(msg.conn_id, player);
             }
             PlayerStateOperations::Move(msg) => {
                 let player = players.get(&msg.conn_id).unwrap();

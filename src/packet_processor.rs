@@ -1,3 +1,4 @@
+use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player::PlayerStateOperations;
 use super::messenger::MessengerOperations;
 use super::packet::read;
@@ -9,8 +10,10 @@ use uuid::Uuid;
 
 pub enum PacketProcessorOperations {
     Inbound(InboundPacketMessage),
+    SetTranslationData(TranslationDataMessage),
 }
 
+#[derive(Debug)]
 pub enum TranslationUpdates {
     State(i32),
     NoChange,
@@ -22,11 +25,19 @@ pub struct InboundPacketMessage {
     pub cursor: Cursor<Vec<u8>>,
 }
 
+#[derive(Debug)]
+pub struct TranslationDataMessage {
+    pub conn_id: Uuid,
+    pub update: TranslationUpdates,
+}
+
+#[derive(Debug)]
 struct TranslationInfo {
     pub state: i32,
     pub map: Option<Map>,
 }
 
+#[derive(Debug)]
 struct Map {
     pub x_origin: i32,
     pub y_origin: i32,
@@ -51,6 +62,7 @@ pub fn start_inbound(
     receiver: Receiver<PacketProcessorOperations>,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
+    patchwork_state: Sender<PatchworkStateOperations>,
 ) {
     let mut translation_data = HashMap::<Uuid, TranslationInfo>::new();
 
@@ -68,7 +80,14 @@ pub fn start_inbound(
                     msg.conn_id,
                     messenger.clone(),
                     player_state.clone(),
+                    patchwork_state.clone(),
                 ));
+            }
+            PacketProcessorOperations::SetTranslationData(msg) => {
+                translation_data
+                    .entry(msg.conn_id)
+                    .or_insert_with(TranslationInfo::new)
+                    .update(msg.update);
             }
         }
     }

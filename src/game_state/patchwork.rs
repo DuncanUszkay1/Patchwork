@@ -1,24 +1,23 @@
-use super::messenger::{NewConnectionMessage, BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
+use super::messenger::{MessengerOperations, NewConnectionMessage, SendPacketMessage};
+use super::packet::{Handshake, Packet};
+use super::packet_processor::{
+    PacketProcessorOperations, TranslationDataMessage, TranslationUpdates,
+};
 use super::server;
-use super::packet::{Packet, Handshake};
-use std::collections::HashMap;
+use std::io;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
+use std::thread;
 use uuid::Uuid;
 
 pub enum PatchworkStateOperations {
     New(NewMapMessage),
-    Report(ReportMessage),
+    Report,
 }
 
 #[derive(Debug)]
 pub struct NewMapMessage {
     pub peer: Peer,
-}
-
-#[derive(Debug)]
-pub struct ReportMessage {
-    pub conn_id: Uuid,
 }
 
 #[derive(Debug, Clone)]
@@ -44,10 +43,16 @@ impl Patchwork {
             position: self.next_position(),
             peer,
             entity_id_block: self.next_entity_id_block(),
+            conn_id: Uuid::new_v4(),
         };
         self.maps.push(map.clone());
-        println!("patchwork maps {:?}", self.maps);
         map
+    }
+
+    pub fn report(self, messenger: Sender<MessengerOperations>) {
+        self.maps
+            .into_iter()
+            .for_each(|map| map.report(messenger.clone()));
     }
 
     // get the next block of size 1000 entity ids assigned to this map
@@ -67,22 +72,59 @@ struct Map {
     pub position: Position,
     pub entity_id_block: i32,
     pub peer: Peer,
+    pub conn_id: Uuid,
+}
+
+#[derive(Debug, Clone)]
+pub struct Position {
+    pub x: i32,
+    pub z: i32,
 }
 
 impl Map {
-    fn connect(self, messenger: Sender<MessengerOperations>) {
-        let conn_id = Uuid::new_v4();
-        if let Ok(stream) = server::new_connection(self.peer.address.clone(), self.peer.port) {
-            messenger
-                .send(MessengerOperations::New(NewConnectionMessage {
-                    conn_id,
-                    socket: stream.try_clone().unwrap(),
-                }))
-                .unwrap();
+    fn connect(
+        &self,
+        messenger: Sender<MessengerOperations>,
+        inbound_packet_processor: Sender<PacketProcessorOperations>,
+    ) -> Result<(), io::Error> {
+        let stream = server::new_connection(self.peer.address.clone(), self.peer.port)?;
+        messenger
+            .send(MessengerOperations::New(NewConnectionMessage {
+                conn_id: self.conn_id,
+                socket: stream.try_clone().unwrap(),
+            }))
+            .unwrap();
+        inbound_packet_processor
+            .send(PacketProcessorOperations::SetTranslationData(
+                TranslationDataMessage {
+                    conn_id: self.conn_id,
+                    update: TranslationUpdates::State(5),
+                },
+            ))
+            .unwrap();
+        let messenger_clone = messenger.clone();
+        let inbound_packet_processor_clone = inbound_packet_processor.clone();
+        let conn_id_clone = self.conn_id;
+        thread::spawn(move || {
+            server::handle_connection(
+                stream.try_clone().unwrap(),
+                inbound_packet_processor_clone,
+                messenger_clone,
+                conn_id_clone,
+            );
+        });
+        Ok(())
+    }
 
+    fn create_event_listener(
+        self,
+        messenger: Sender<MessengerOperations>,
+        inbound_packet_processor: Sender<PacketProcessorOperations>,
+    ) {
+        if let Ok(()) = self.connect(messenger.clone(), inbound_packet_processor) {
             send_packet!(
                 messenger,
-                conn_id,
+                self.conn_id,
                 Packet::Handshake(Handshake {
                     protocol_version: 404,
                     server_address: self.peer.address.clone(),
@@ -92,9 +134,13 @@ impl Map {
             )
             .unwrap();
 
+            //we send two packets because our protocol requires at least two packets to be sent
+            //before it can do anything- the first is a handshake, then the second one it can
+            //actually response to (it ignores the type of packet, so we just send it random data)
+            //to be changed later with a real request packet
             send_packet!(
                 messenger,
-                conn_id,
+                self.conn_id,
                 Packet::Handshake(Handshake {
                     protocol_version: 404,
                     server_address: self.peer.address.clone(),
@@ -105,30 +151,38 @@ impl Map {
             .unwrap();
         };
     }
-}
 
-//This probably belongs at an entity level, but since we don't have a real concept of entities yet
-//this'll do
-//Ignoring angle since we haven't implemented that datatype just yet
-#[derive(Debug, Clone)]
-pub struct Position {
-    pub x: i32,
-    pub z: i32,
+    fn report(self, messenger: Sender<MessengerOperations>) {
+        send_packet!(
+            messenger,
+            self.conn_id,
+            Packet::Handshake(Handshake {
+                protocol_version: 404,
+                server_address: self.peer.address.clone(),
+                server_port: self.peer.port,
+                next_state: 5,
+            })
+        )
+        .unwrap();
+    }
 }
 
 pub fn start_patchwork_state(
     receiver: Receiver<PatchworkStateOperations>,
     messenger: Sender<MessengerOperations>,
+    inbound_packet_processor: Sender<PacketProcessorOperations>,
 ) {
     let mut patchwork = Patchwork::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {
             PatchworkStateOperations::New(msg) => {
-                patchwork.add_map(msg.peer).connect(messenger.clone());
+                patchwork
+                    .add_map(msg.peer)
+                    .create_event_listener(messenger.clone(), inbound_packet_processor.clone());
             }
-            PatchworkStateOperations::Report(msg) => {
-                unimplemented!("Don't know how to report this yet");
+            PatchworkStateOperations::Report => {
+                patchwork.clone().report(messenger.clone());
             }
         }
     }

@@ -6,6 +6,7 @@ use super::minecraft_protocol::{
 use std::io::{Cursor, Read, Write};
 
 // Format: (state (99 is outgoing), name, id, [ list of (field name, field type) ]
+#[rustfmt::skip::macros(packet_boilerplate)]
 packet_boilerplate!(
     (
         0,
@@ -46,6 +47,7 @@ packet_boilerplate!(
             (on_ground, Boolean)
         ]
     ),
+    (6, ReportState, 0x1, []),
     (99, Pong, 1, [(payload, Long)]),
     (99, StatusResponse, 0, [(json_response, String)]),
     (99, LoginSuccess, 2, [(uuid, String), (username, String)]),
@@ -93,18 +95,18 @@ packet_boilerplate!(
         ]
     ),
     (
-        99,
+        _,
         PlayerInfo,
         0x30,
         [
-            (action, VarInt), //always 0
+            (action, VarInt),
             (number_of_players, VarInt),
             (uuid, u128),
             (name, String),
-            (number_of_properties, VarInt), //always 0
+            (number_of_properties, VarInt),
             (gamemode, VarInt),
             (ping, VarInt),
-            (has_display_name, Boolean) //always false
+            (has_display_name, Boolean)
         ]
     ),
     (

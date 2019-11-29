@@ -8,7 +8,7 @@ const FAKE_RESPONSE: &str = "{\"version\": {\"name\": \"1.13.2\",\"protocol\": 4
 
 // Called when client pings the server
 pub fn init_client_ping(p: Packet, conn_id: Uuid, messenger: Sender<MessengerOperations>) {
-    println!("Ping packet : {:?}", p);
+    //println!("Ping packet : {:?}", p);
 
     match p.clone() {
         Packet::StatusRequest(_) => {

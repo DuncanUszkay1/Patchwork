@@ -1,8 +1,8 @@
 use super::super::minecraft_protocol::ChunkSection;
-use super::game_state::player::{
-    NewPlayerMessage, Player, PlayerStateOperations, Position, ReportMessage,
-};
-use super::messenger::{MessengerOperations, SendPacketMessage};
+use super::game_state::patchwork::PatchworkStateOperations;
+use super::game_state::player;
+use super::game_state::player::{NewPlayerMessage, Player, PlayerStateOperations, Position};
+use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage};
 use super::packet;
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
@@ -14,11 +14,18 @@ pub fn init_login(
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
+    patchwork_state: Sender<PatchworkStateOperations>,
 ) {
     println!("Login protocol initiated :{:?}", p);
     match p.clone() {
         Packet::LoginStart(login_start) => {
-            confirm_login(conn_id, messenger, login_start, player_state);
+            confirm_login(
+                conn_id,
+                messenger,
+                login_start,
+                player_state,
+                patchwork_state,
+            );
         }
         _ => {
             println!("Login failed");
@@ -31,11 +38,13 @@ fn confirm_login(
     messenger: Sender<MessengerOperations>,
     login_start: packet::LoginStart,
     player_state: Sender<PlayerStateOperations>,
+    patchwork_state: Sender<PatchworkStateOperations>,
 ) {
     let player = Player {
         conn_id,
         uuid: Uuid::new_v4(),
         name: login_start.username,
+        entity_id: 0, // replaced by player state
         position: Position {
             x: 5.0,
             y: 16.0,
@@ -49,10 +58,20 @@ fn confirm_login(
     set_position(conn_id, messenger.clone(), player.clone());
     temp_send_block_data(conn_id, messenger.clone());
 
+    messenger
+        .send(MessengerOperations::Subscribe(SubscribeMessage { conn_id }))
+        .unwrap();
+
     //report current state to player (soon to be in it's own component for reuse)
     //the only state we keep right now is players
     player_state
-        .send(PlayerStateOperations::Report(ReportMessage { conn_id }))
+        .send(PlayerStateOperations::Report(player::ReportMessage {
+            conn_id,
+        }))
+        .unwrap();
+
+    patchwork_state
+        .send(PatchworkStateOperations::Report)
         .unwrap();
 
     //update the gamestate with this new player
@@ -86,7 +105,6 @@ fn join_game(conn_id: Uuid, messenger: Sender<MessengerOperations>) {
 }
 
 fn set_position(conn_id: Uuid, messenger: Sender<MessengerOperations>, player: Player) {
-    println!("Seeting player's position and camera ...");
     let player_pos_and_look = packet::ClientboundPlayerPositionAndLook {
         x: player.position.x,
         y: player.position.y,

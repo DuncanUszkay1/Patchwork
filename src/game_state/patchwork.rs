@@ -102,6 +102,14 @@ impl Map {
                 },
             ))
             .unwrap();
+        inbound_packet_processor
+            .send(PacketProcessorOperations::SetTranslationData(
+                TranslationDataMessage {
+                    conn_id: self.conn_id,
+                    update: TranslationUpdates::EntityIdBlock(self.entity_id_block),
+                },
+            ))
+            .unwrap();
         let messenger_clone = messenger.clone();
         let inbound_packet_processor_clone = inbound_packet_processor.clone();
         let conn_id_clone = self.conn_id;

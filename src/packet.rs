@@ -110,7 +110,7 @@ packet_boilerplate!(
         ]
     ),
     (
-        99,
+        _,
         SpawnPlayer,
         0x05,
         [

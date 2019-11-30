@@ -1,3 +1,4 @@
+pub mod block;
 pub mod patchwork;
 pub mod player;
 

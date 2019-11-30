@@ -1,3 +1,4 @@
+use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player::PlayerStateOperations;
 use super::gameplay_router;
@@ -18,13 +19,21 @@ pub fn route_packet(
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
+    block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,
 ) -> TranslationUpdates {
     let st = Status::value(state);
     match st {
         Status::Handshake => TranslationUpdates::State(handshake_init::init_handshake(packet)),
         Status::Login => {
-            login_init::init_login(packet, conn_id, messenger, player_state, patchwork_state);
+            login_init::init_login(
+                packet,
+                conn_id,
+                messenger,
+                player_state,
+                block_state,
+                patchwork_state,
+            );
             TranslationUpdates::State(3)
         }
         Status::ClientPing => {
@@ -44,7 +53,7 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::OutPeerSub => {
-            out_peer_sub_init::init_outgoing_peer_sub(packet, conn_id, player_state);
+            out_peer_sub_init::init_outgoing_peer_sub(packet, conn_id, player_state, block_state);
             TranslationUpdates::NoChange
         }
     }

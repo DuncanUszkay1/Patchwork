@@ -80,7 +80,7 @@ packet_boilerplate!(
         ]
     ),
     (
-        99,
+        _,
         ChunkData,
         0x22,
         [

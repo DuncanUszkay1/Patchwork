@@ -125,7 +125,7 @@ packet_boilerplate!(
         ]
     ),
     (
-        99,
+        _,
         EntityLookAndMove,
         0x29,
         [

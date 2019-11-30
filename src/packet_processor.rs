@@ -10,6 +10,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
 const ENTITY_ID_BLOCK_SIZE: i32 = 1000;
+const CHUNK_SIZE: i32 = 16;
 
 pub enum PacketProcessorOperations {
     Inbound(InboundPacketMessage),
@@ -115,13 +116,26 @@ pub fn start_inbound(
     }
 }
 
+// This should definitely be in its own file- and we probably ought to find a way to do it more
+// compactly via macros or something
 fn translate(packet: Packet, translation_data: TranslationInfo) -> Packet {
     match packet {
         Packet::SpawnPlayer(spawn_player) => {
             let mut translated_packet = spawn_player;
             translated_packet.entity_id =
                 translate_entity_id(translated_packet.entity_id, translation_data);
+            translated_packet.x = translate_entity_x(translated_packet.x, translation_data);
             Packet::SpawnPlayer(translated_packet)
+        }
+        Packet::EntityLookAndMove(entity_look_and_move) => {
+            let old_id = entity_look_and_move.entity_id;
+            let mut translated_packet = entity_look_and_move;
+            translated_packet.entity_id =
+                translate_entity_id(translated_packet.entity_id, translation_data);
+            if old_id != translated_packet.entity_id {
+                println!("translated packet is {:?}", translated_packet);
+            }
+            Packet::EntityLookAndMove(translated_packet)
         }
         Packet::ChunkData(chunk_data) => {
             let mut translated_packet = chunk_data;
@@ -130,6 +144,10 @@ fn translate(packet: Packet, translation_data: TranslationInfo) -> Packet {
         }
         _ => packet,
     }
+}
+
+fn translate_entity_x(x: f64, translation_data: TranslationInfo) -> f64 {
+    x + (translation_data.map.x_origin * CHUNK_SIZE) as f64
 }
 
 fn translate_entity_id(entity_id: i32, translation_data: TranslationInfo) -> i32 {

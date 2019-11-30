@@ -1,6 +1,8 @@
+#![feature(option_result_contains)]
+
 use super::keep_alive::{KeepAliveOperations, NewKeepAliveConnectionMessage};
 use super::packet::{write, Packet};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
 use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
@@ -15,9 +17,11 @@ macro_rules! send_packet {
 }
 
 macro_rules! broadcast_packet {
-    ($messenger:expr, $packet:expr) => {
+    ($messenger:expr, $packet:expr, $source_conn_id: expr, $local: expr) => {
         $messenger.send(MessengerOperations::Broadcast(BroadcastPacketMessage {
             packet: $packet,
+            source_conn_id: $source_conn_id,
+            local: $local
         }))
     };
 }
@@ -38,11 +42,14 @@ pub struct SendPacketMessage {
 #[derive(Debug)]
 pub struct SubscribeMessage {
     pub conn_id: Uuid,
+    pub local: bool
 }
 
 #[derive(Debug)]
 pub struct BroadcastPacketMessage {
     pub packet: Packet,
+    pub source_conn_id: Option<Uuid>,
+    pub local: bool
 }
 
 #[derive(Debug)]
@@ -52,16 +59,19 @@ pub struct NewConnectionMessage {
 }
 
 pub fn start_messenger(
-    receiver: Receiver<MessengerOperations>,
-    keep_alive_sender: Sender<KeepAliveOperations>,
+    receiver: Receiver<MessengerOperations>
 ) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();
-    let mut broadcast_list = Vec::<Uuid>::new();
+    // Connections that want all packets- including those from our peers
+    let mut local_broadcast_list = HashSet::<Uuid>::new();
+    // Connections that only want packets that involve events that occur on our server
+    let mut broadcast_list = HashSet::<Uuid>::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {
             MessengerOperations::Send(msg) => match connection_map.get(&msg.conn_id) {
                 Some(socket) => {
+                    //println!("sending {:?}", msg.packet);
                     let mut socket_clone = socket.try_clone().unwrap();
                     write(&mut socket_clone, msg.packet);
                 }
@@ -70,23 +80,45 @@ pub fn start_messenger(
                 }
             },
             MessengerOperations::Broadcast(msg) => {
-                (&broadcast_list).iter().for_each(|conn_id| {
-                    //println!("broadcasting to {:?}", conn_id);
-                    if let Some(socket) = connection_map.get(&conn_id) {
-                        let mut socket_clone = socket.try_clone().unwrap();
-                        let packet_clone = msg.packet.clone();
-                        write(&mut socket_clone, packet_clone);
+                // Alright this local thing is confusing- we should think about renaming it. The
+                // problem is local users (ones who connected to us directly) want to know about
+                // our peers (so they want to know about non-local packets) and non-local users
+                // only want to know about local packets
+                //println!("broadcasting {:?}", msg.packet);
+                let mut broadcast_count = 0;
+                println!("locals: {:?}, other: {:?}", local_broadcast_list, broadcast_list);
+                (&local_broadcast_list).iter().for_each(|conn_id| {
+                    if msg.source_conn_id.is_none() || msg.source_conn_id.unwrap() != *conn_id {
+                        if let Some(socket) = connection_map.get(&conn_id) {
+                            broadcast_count += 1;
+                            let mut socket_clone = socket.try_clone().unwrap();
+                            let packet_clone = msg.packet.clone();
+                            write(&mut socket_clone, packet_clone);
+                        }
                     }
                 });
+                if msg.local == true {
+                    println!("sending out local packet..");
+                    (&broadcast_list).iter().for_each(|conn_id| {
+                        //println!("broadcasting to {:?}", conn_id);
+                        if let Some(socket) = connection_map.get(&conn_id) {
+                            broadcast_count += 1;
+                            let mut socket_clone = socket.try_clone().unwrap();
+                            let packet_clone = msg.packet.clone();
+                            write(&mut socket_clone, packet_clone);
+                        }
+                    });
+                }
+                println!("broadcast sent to {:?}", broadcast_count);
             }
-            MessengerOperations::Subscribe(msg) => broadcast_list.push(msg.conn_id),
+            MessengerOperations::Subscribe(msg) => {
+                match msg.local {
+                    true => { local_broadcast_list.insert(msg.conn_id); },
+                    false => { broadcast_list.insert(msg.conn_id); }
+                }
+            }
             MessengerOperations::New(msg) => {
                 connection_map.insert(msg.conn_id, msg.socket);
-                keep_alive_sender
-                    .send(KeepAliveOperations::New(NewKeepAliveConnectionMessage {
-                        conn_id: msg.conn_id,
-                    }))
-                    .unwrap();
             }
         }
     }

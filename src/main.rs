@@ -24,13 +24,12 @@ use std::thread;
 
 fn main() {
     let (messenger_sender, messenger_receiver) = channel();
-    let (keep_alive_sender, keep_alive_receiver) = channel();
     let (inbound_packet_processor_sender, inbound_packet_processor_receiver) = channel();
     let (player_state_sender, player_state_receiver) = channel();
     let (block_state_sender, block_state_receiver) = channel();
     let (patchwork_state_sender, patchwork_state_receiver) = channel();
 
-    thread::spawn(move || start_messenger(messenger_receiver, keep_alive_sender));
+    thread::spawn(move || start_messenger(messenger_receiver));
 
     let messenger_clone = messenger_sender.clone();
     thread::spawn(move || start_player_state(player_state_receiver, messenger_clone));
@@ -49,7 +48,7 @@ fn main() {
     });
 
     let messenger_clone = messenger_sender.clone();
-    thread::spawn(move || start_keep_alive(keep_alive_receiver, messenger_clone));
+    thread::spawn(move || start_keep_alive(messenger_clone));
 
     let messenger_clone = messenger_sender.clone();
     let player_state_clone = player_state_sender.clone();

@@ -58,11 +58,23 @@ fn confirm_login(
 
     //protocol
     login_success(conn_id, messenger.clone(), player.clone());
-    join_game(conn_id, messenger.clone());
-    set_position(conn_id, messenger.clone(), player.clone());
+
+    //update the gamestate with this new player
+    player_state
+        .send(PlayerStateOperations::New(NewPlayerMessage {
+            conn_id,
+            player,
+        }))
+        .unwrap();
+
+    block_state
+        .send(BlockStateOperations::Report(block::ReportMessage {
+            conn_id,
+        }))
+        .unwrap();
 
     messenger
-        .send(MessengerOperations::Subscribe(SubscribeMessage { conn_id }))
+        .send(MessengerOperations::Subscribe(SubscribeMessage { conn_id, local: true }))
         .unwrap();
 
     //report current state to player (soon to be in it's own component for reuse)
@@ -73,22 +85,9 @@ fn confirm_login(
         }))
         .unwrap();
 
-    block_state
-        .send(BlockStateOperations::Report(block::ReportMessage {
-            conn_id,
-        }))
-        .unwrap();
 
     patchwork_state
         .send(PatchworkStateOperations::Report)
-        .unwrap();
-
-    //update the gamestate with this new player
-    player_state
-        .send(PlayerStateOperations::New(NewPlayerMessage {
-            conn_id,
-            player,
-        }))
         .unwrap();
 }
 
@@ -98,35 +97,4 @@ fn login_success(conn_id: Uuid, messenger: Sender<MessengerOperations>, player: 
         username: player.name,
     };
     send_packet!(messenger, conn_id, Packet::LoginSuccess(login_success)).unwrap();
-}
-
-fn join_game(conn_id: Uuid, messenger: Sender<MessengerOperations>) {
-    let join_game = packet::JoinGame {
-        entity_id: 0,
-        gamemode: 1,
-        dimension: 0,
-        difficulty: 0,
-        max_players: 2,
-        level_type: String::from("default"),
-        reduced_debug_info: false,
-    };
-    send_packet!(messenger, conn_id, Packet::JoinGame(join_game)).unwrap();
-}
-
-fn set_position(conn_id: Uuid, messenger: Sender<MessengerOperations>, player: Player) {
-    let player_pos_and_look = packet::ClientboundPlayerPositionAndLook {
-        x: player.position.x,
-        y: player.position.y,
-        z: player.position.z,
-        yaw: 0.0,
-        pitch: 0.0,
-        flags: 0,
-        teleport_id: 0,
-    };
-    send_packet!(
-        messenger,
-        conn_id,
-        Packet::ClientboundPlayerPositionAndLook(player_pos_and_look)
-    )
-    .unwrap();
 }

@@ -1,5 +1,6 @@
 use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
-use super::packet::{EntityLookAndMove, Packet, PlayerInfo, SpawnPlayer};
+use super::super::minecraft_protocol::ChunkSection;
+use super::packet::{EntityLookAndMove, Packet, PlayerInfo, SpawnPlayer, JoinGame,ClientboundPlayerPositionAndLook, ChunkData};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::mpsc::Receiver;
@@ -77,6 +78,52 @@ pub fn start_player_state(
                 let mut player = msg.player;
                 player.entity_id = players.len().try_into().expect("too many players");
                 println!("{:?}", player);
+                let join_game = JoinGame {
+                    entity_id: player.entity_id,
+                    gamemode: 1,
+                    dimension: 0,
+                    difficulty: 0,
+                    max_players: 2,
+                    level_type: String::from("default"),
+                    reduced_debug_info: false,
+                };
+                send_packet!(messenger, msg.conn_id, Packet::JoinGame(join_game)).unwrap();
+                let player_pos_and_look = ClientboundPlayerPositionAndLook {
+                    x: player.position.x,
+                    y: player.position.y,
+                    z: player.position.z,
+                    yaw: 0.0,
+                    pitch: 0.0,
+                    flags: 0,
+                    teleport_id: 0,
+                };
+                send_packet!(
+                    messenger,
+                    msg.conn_id,
+                    Packet::ClientboundPlayerPositionAndLook(player_pos_and_look)
+                )
+                .unwrap();
+                send_packet!(
+                    messenger,
+                    msg.conn_id,
+                    Packet::ChunkData(ChunkData {
+                        chunk_x: 0,
+                        chunk_z: 0,
+                        full_chunk: true,
+                        primary_bit_mask: 1,
+                        size: 12291, //I just calculated the length of this hardcoded chunk section
+                        data: ChunkSection {
+                            bits_per_block: 14,
+                            data_array_length: 896,
+                            block_ids: Vec::new(),
+                            block_light: Vec::new(),
+                            sky_light: Vec::new(),
+                        },
+                        biomes: vec![127; 256],
+                        number_of_block_entities: 0,
+                    })
+                )
+                .unwrap();
                 players.insert(msg.conn_id, player);
             }
             PlayerStateOperations::Move(msg) => {
@@ -87,52 +134,56 @@ pub fn start_player_state(
                 broadcast_packet!(
                     messenger,
                     Packet::EntityLookAndMove(EntityLookAndMove {
-                        entity_id: player_clone.conn_id.as_u128() as i32,
+                        entity_id: player.entity_id,
                         delta_x: position_delta.x,
                         delta_y: position_delta.y,
                         delta_z: position_delta.z,
                         yaw: 0,
                         pitch: 0,
                         on_ground: false,
-                    })
+                    }),
+                    Some(player.conn_id),
+                    true
                 )
                 .unwrap();
                 player_clone.position = msg.new_position;
                 players.insert(msg.conn_id, player_clone);
             }
             PlayerStateOperations::Report(msg) => {
-                players.values().for_each(|player| {
-                    let player_clone = player.clone();
-                    send_packet!(
-                        messenger,
-                        msg.conn_id,
-                        Packet::PlayerInfo(PlayerInfo {
-                            action: 0,
-                            number_of_players: 1, //send each player in an individual packet for now
-                            uuid: player_clone.uuid.as_u128(),
-                            name: player_clone.name.clone(),
-                            number_of_properties: 0,
-                            gamemode: 1,
-                            ping: 100,
-                            has_display_name: false,
-                        })
-                    )
-                    .unwrap();
-                    send_packet!(
-                        messenger,
-                        msg.conn_id,
-                        Packet::SpawnPlayer(SpawnPlayer {
-                            entity_id: player.entity_id,
-                            uuid: player_clone.uuid.as_u128(),
-                            x: player_clone.position.x,
-                            y: player_clone.position.y,
-                            z: player_clone.position.z,
-                            yaw: 0,
-                            pitch: 0,
-                            entity_metadata_terminator: 0xff,
-                        })
-                    )
-                    .unwrap();
+                players.iter().for_each(|(conn_id, player)| {
+                    if *conn_id != msg.conn_id {
+                        let player_clone = player.clone();
+                        send_packet!(
+                            messenger,
+                            msg.conn_id,
+                            Packet::PlayerInfo(PlayerInfo {
+                                action: 0,
+                                number_of_players: 1, //send each player in an individual packet for now
+                                uuid: player_clone.uuid.as_u128(),
+                                name: player_clone.name.clone(),
+                                number_of_properties: 0,
+                                gamemode: 1,
+                                ping: 100,
+                                has_display_name: false,
+                            })
+                        )
+                        .unwrap();
+                        send_packet!(
+                            messenger,
+                            msg.conn_id,
+                            Packet::SpawnPlayer(SpawnPlayer {
+                                entity_id: player.entity_id,
+                                uuid: player_clone.uuid.as_u128(),
+                                x: player_clone.position.x,
+                                y: player_clone.position.y,
+                                z: player_clone.position.z,
+                                yaw: 0,
+                                pitch: 0,
+                                entity_metadata_terminator: 0xff,
+                            })
+                        )
+                        .unwrap();
+                    }
                 })
             }
         }

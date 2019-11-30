@@ -76,6 +76,7 @@ pub fn start_player_state(
             PlayerStateOperations::New(msg) => {
                 let mut player = msg.player;
                 player.entity_id = players.len().try_into().expect("too many players");
+                println!("{:?}", player);
                 players.insert(msg.conn_id, player);
             }
             PlayerStateOperations::Move(msg) => {
@@ -121,7 +122,7 @@ pub fn start_player_state(
                         messenger,
                         msg.conn_id,
                         Packet::SpawnPlayer(SpawnPlayer {
-                            entity_id: player.conn_id.as_u128() as i32,
+                            entity_id: player.entity_id,
                             uuid: player_clone.uuid.as_u128(),
                             x: player_clone.position.x,
                             y: player_clone.position.y,

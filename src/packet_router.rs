@@ -44,7 +44,7 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::OutPeerSub => {
-            out_peer_sub_init::init_outgoing_peer_sub(packet, conn_id, messenger);
+            out_peer_sub_init::init_outgoing_peer_sub(packet, conn_id, player_state);
             TranslationUpdates::NoChange
         }
     }

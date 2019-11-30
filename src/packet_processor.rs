@@ -1,7 +1,8 @@
+use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player::PlayerStateOperations;
 use super::messenger::MessengerOperations;
-use super::packet::{Packet, read};
+use super::packet::{read, Packet};
 use super::packet_router;
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -19,6 +20,7 @@ pub enum PacketProcessorOperations {
 pub enum TranslationUpdates {
     State(i32),
     EntityIdBlock(i32),
+    XOrigin(i32),
     NoChange,
 }
 
@@ -38,7 +40,7 @@ pub struct TranslationDataMessage {
 struct TranslationInfo {
     pub state: i32,
     pub entity_id_block: i32,
-    pub map: Option<Map>,
+    pub map: Map,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -51,8 +53,11 @@ impl TranslationInfo {
     pub fn new() -> TranslationInfo {
         TranslationInfo {
             state: 0,
-            map: None,
-            entity_id_block: 0
+            map: Map {
+                x_origin: 0,
+                y_origin: 0,
+            },
+            entity_id_block: 0,
         }
     }
 
@@ -64,6 +69,9 @@ impl TranslationInfo {
             TranslationUpdates::EntityIdBlock(block) => {
                 self.entity_id_block = block;
             }
+            TranslationUpdates::XOrigin(x) => {
+                self.map.x_origin = x;
+            }
             TranslationUpdates::NoChange => {}
         }
     }
@@ -73,6 +81,7 @@ pub fn start_inbound(
     receiver: Receiver<PacketProcessorOperations>,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
+    block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,
 ) {
     let mut translation_data = HashMap::<Uuid, TranslationInfo>::new();
@@ -92,6 +101,7 @@ pub fn start_inbound(
                     msg.conn_id,
                     messenger.clone(),
                     player_state.clone(),
+                    block_state.clone(),
                     patchwork_state.clone(),
                 ));
             }
@@ -109,10 +119,16 @@ fn translate(packet: Packet, translation_data: TranslationInfo) -> Packet {
     match packet {
         Packet::SpawnPlayer(spawn_player) => {
             let mut translated_packet = spawn_player;
-            translated_packet.entity_id = translate_entity_id(translated_packet.entity_id, translation_data);
+            translated_packet.entity_id =
+                translate_entity_id(translated_packet.entity_id, translation_data);
             Packet::SpawnPlayer(translated_packet)
         }
-        _ => packet
+        Packet::ChunkData(chunk_data) => {
+            let mut translated_packet = chunk_data;
+            translated_packet.chunk_x = translation_data.map.x_origin;
+            Packet::ChunkData(translated_packet)
+        }
+        _ => packet,
     }
 }
 

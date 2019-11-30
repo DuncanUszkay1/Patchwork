@@ -1,4 +1,6 @@
 use super::super::minecraft_protocol::ChunkSection;
+use super::game_state::block;
+use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player;
 use super::game_state::player::{NewPlayerMessage, Player, PlayerStateOperations, Position};
@@ -14,9 +16,9 @@ pub fn init_login(
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
+    block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,
 ) {
-    println!("Login protocol initiated :{:?}", p);
     match p.clone() {
         Packet::LoginStart(login_start) => {
             confirm_login(
@@ -24,6 +26,7 @@ pub fn init_login(
                 messenger,
                 login_start,
                 player_state,
+                block_state,
                 patchwork_state,
             );
         }
@@ -38,6 +41,7 @@ fn confirm_login(
     messenger: Sender<MessengerOperations>,
     login_start: packet::LoginStart,
     player_state: Sender<PlayerStateOperations>,
+    block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,
 ) {
     let player = Player {
@@ -56,7 +60,6 @@ fn confirm_login(
     login_success(conn_id, messenger.clone(), player.clone());
     join_game(conn_id, messenger.clone());
     set_position(conn_id, messenger.clone(), player.clone());
-    temp_send_block_data(conn_id, messenger.clone());
 
     messenger
         .send(MessengerOperations::Subscribe(SubscribeMessage { conn_id }))
@@ -66,6 +69,12 @@ fn confirm_login(
     //the only state we keep right now is players
     player_state
         .send(PlayerStateOperations::Report(player::ReportMessage {
+            conn_id,
+        }))
+        .unwrap();
+
+    block_state
+        .send(BlockStateOperations::Report(block::ReportMessage {
             conn_id,
         }))
         .unwrap();
@@ -120,24 +129,4 @@ fn set_position(conn_id: Uuid, messenger: Sender<MessengerOperations>, player: P
         Packet::ClientboundPlayerPositionAndLook(player_pos_and_look)
     )
     .unwrap();
-}
-
-fn temp_send_block_data(conn_id: Uuid, messenger: Sender<MessengerOperations>) {
-    let chunk_data = packet::ChunkData {
-        chunk_x: 0,
-        chunk_z: 0,
-        full_chunk: true,
-        primary_bit_mask: 1,
-        size: 12291, //I just calculated the length of this hardcoded chunk section
-        data: ChunkSection {
-            bits_per_block: 14,
-            data_array_length: 896,
-            block_ids: Vec::new(),
-            block_light: Vec::new(),
-            sky_light: Vec::new(),
-        },
-        biomes: vec![127; 256],
-        number_of_block_entities: 0,
-    };
-    send_packet!(messenger, conn_id, Packet::ChunkData(chunk_data)).unwrap();
 }

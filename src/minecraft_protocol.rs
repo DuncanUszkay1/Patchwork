@@ -65,6 +65,7 @@ pub fn read_var_int<S: Read>(stream: &mut S) -> Result<i32, Error> {
     Ok(result)
 }
 
+//Both of these methods are temporary- need to recreate them when we implement chunks in earnest
 pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
     stream.write_u_byte(v.bits_per_block);
     stream.write_var_int(v.data_array_length);
@@ -80,6 +81,27 @@ pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
         stream
             .write_u8(!0b0)
             .expect("could not write max sky light"); //write max sky light
+    }
+}
+
+pub fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
+    stream.read_u_byte();
+    stream.read_var_int();
+    for _ in 0..896 {
+        stream.read_long(); //read all air blocks
+    }
+    for _ in 0..2048 {
+        stream.read_u8();
+    }
+    for _ in 0..2048 {
+        stream.read_u8();
+    }
+    ChunkSection {
+        bits_per_block: 14,
+        data_array_length: 896,
+        block_ids: Vec::<i32>::new(),
+        block_light: Vec::<u64>::new(),
+        sky_light: Vec::<u64>::new(),
     }
 }
 
@@ -133,7 +155,12 @@ impl<T: Read> MinecraftProtocolReader for T {
     }
 
     fn read_int_array(&mut self) -> Vec<i32> {
-        unimplemented!();
+        // only supports arrays with 256 entires (to support biome array)
+        let mut v = Vec::<i32>::new();
+        for _ in 0..256 {
+            v.push(self.read_i32::<BigEndian>().unwrap());
+        }
+        v
     }
 
     fn read_float(&mut self) -> f32 {
@@ -141,7 +168,7 @@ impl<T: Read> MinecraftProtocolReader for T {
     }
 
     fn read_chunk_section(&mut self) -> ChunkSection {
-        unimplemented!();
+        read_chunk_section(self)
     }
 
     fn read_double(&mut self) -> f64 {

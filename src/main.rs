@@ -12,6 +12,7 @@ mod packet_processor;
 mod packet_router;
 mod peer_conn_protocol;
 mod server;
+use game_state::block::start_block_state;
 use game_state::patchwork::start_patchwork_state;
 use game_state::player::start_player_state;
 use keep_alive::start_keep_alive;
@@ -26,12 +27,16 @@ fn main() {
     let (keep_alive_sender, keep_alive_receiver) = channel();
     let (inbound_packet_processor_sender, inbound_packet_processor_receiver) = channel();
     let (player_state_sender, player_state_receiver) = channel();
+    let (block_state_sender, block_state_receiver) = channel();
     let (patchwork_state_sender, patchwork_state_receiver) = channel();
 
     thread::spawn(move || start_messenger(messenger_receiver, keep_alive_sender));
 
     let messenger_clone = messenger_sender.clone();
     thread::spawn(move || start_player_state(player_state_receiver, messenger_clone));
+
+    let messenger_clone = messenger_sender.clone();
+    thread::spawn(move || start_block_state(block_state_receiver, messenger_clone));
 
     let messenger_clone = messenger_sender.clone();
     let inbound_packet_processor_sender_clone = inbound_packet_processor_sender.clone();
@@ -48,12 +53,14 @@ fn main() {
 
     let messenger_clone = messenger_sender.clone();
     let player_state_clone = player_state_sender.clone();
+    let block_state_clone = block_state_sender.clone();
     let patchwork_state_clone = patchwork_state_sender.clone();
     thread::spawn(move || {
         start_inbound(
             inbound_packet_processor_receiver,
             messenger_clone,
             player_state_clone,
+            block_state_clone,
             patchwork_state_clone,
         )
     });

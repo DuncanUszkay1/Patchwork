@@ -183,7 +183,7 @@ impl Map {
     }
 }
 
-pub fn start_patchwork_state(
+pub fn start(
     receiver: Receiver<PatchworkStateOperations>,
     messenger: Sender<MessengerOperations>,
     inbound_packet_processor: Sender<PacketProcessorOperations>,

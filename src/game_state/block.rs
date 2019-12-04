@@ -19,7 +19,7 @@ pub struct ReportMessage {
     pub conn_id: Uuid,
 }
 
-pub fn start_block_state(
+pub fn start(
     receiver: Receiver<BlockStateOperations>,
     messenger: Sender<MessengerOperations>,
 ) {

@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
 use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
+use std::thread;
 
 macro_rules! send_packet {
     ($messenger:expr, $conn_id:expr, $packet:expr) => {
@@ -58,7 +59,7 @@ pub struct NewConnectionMessage {
     pub socket: TcpStream,
 }
 
-pub fn start_messenger(
+pub fn start(
     receiver: Receiver<MessengerOperations>
 ) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();

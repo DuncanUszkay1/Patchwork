@@ -66,7 +66,7 @@ pub struct PlayerMovementMessage {
     pub new_position: Position,
 }
 
-pub fn start_player_state(
+pub fn start(
     receiver: Receiver<PlayerStateOperations>,
     messenger: Sender<MessengerOperations>,
 ) {

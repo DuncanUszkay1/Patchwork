@@ -8,4 +8,7 @@ edition = "2018"
 
 [dependencies]
 byteorder = "1"
+# I added this for the service macro- if it's causing issues we can
+# get rid of it and go back to the old way of creating services
+paste = "0.1"
 uuid = { version = "0.8", features = ["v4"] }

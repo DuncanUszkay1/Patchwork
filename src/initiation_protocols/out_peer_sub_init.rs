@@ -4,7 +4,7 @@ use super::game_state::block;
 use super::game_state::block::BlockStateOperations;
 use super::game_state::player;
 use super::game_state::player::{NewPlayerMessage, Player, PlayerStateOperations, Position};
-use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage};
+use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage, SubscriberType};
 use super::packet::{EntityLookAndMove, Packet, PlayerInfo, SpawnPlayer};
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -24,7 +24,7 @@ pub fn init_outgoing_peer_sub(
     messenger
         .send(MessengerOperations::Subscribe(SubscribeMessage {
             conn_id,
-            local: false,
+            typ: SubscriberType::LocalOnly,
         }))
         .unwrap();
 

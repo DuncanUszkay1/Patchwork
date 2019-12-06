@@ -3,8 +3,8 @@ use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player::PlayerStateOperations;
 use super::gameplay_router;
 use super::initiation_protocols::{
-    border_cross_login_init, client_ping_init, handshake_init, in_peer_sub_init, login_init,
-    out_peer_sub_init,
+    border_cross_login, client_ping, handshake, in_peer_sub, login,
+    out_peer_sub,
 };
 use super::messenger::MessengerOperations;
 use super::packet::Packet;
@@ -24,9 +24,9 @@ pub fn route_packet(
 ) -> TranslationUpdates {
     let st = Status::value(state);
     match st {
-        Status::Handshake => TranslationUpdates::State(handshake_init::init_handshake(packet)),
+        Status::Handshake => TranslationUpdates::State(handshake::init_handshake(packet)),
         Status::Login => {
-            login_init::init_login(
+            login::init_login(
                 packet,
                 conn_id,
                 messenger,
@@ -37,7 +37,7 @@ pub fn route_packet(
             TranslationUpdates::State(3)
         }
         Status::ClientPing => {
-            client_ping_init::init_client_ping(packet, conn_id, messenger);
+            client_ping::init_client_ping(packet, conn_id, messenger);
             TranslationUpdates::NoChange
         }
         Status::Play => {
@@ -45,15 +45,15 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::BorderCrossLogin => {
-            border_cross_login_init::init_border_cross_login(packet);
+            border_cross_login::init_border_cross_login(packet);
             TranslationUpdates::NoChange
         }
         Status::InPeerSub => {
-            in_peer_sub_init::init_incoming_peer_sub(packet, conn_id, messenger);
+            in_peer_sub::init_incoming_peer_sub(packet, conn_id, messenger);
             TranslationUpdates::NoChange
         }
         Status::OutPeerSub => {
-            out_peer_sub_init::init_outgoing_peer_sub(
+            out_peer_sub::init_outgoing_peer_sub(
                 packet,
                 conn_id,
                 messenger,

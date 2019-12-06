@@ -39,11 +39,14 @@ pub struct SendPacketMessage {
 #[derive(Debug)]
 pub struct SubscribeMessage {
     pub conn_id: Uuid,
-    pub typ: SubscriberType
+    pub typ: SubscriberType,
 }
 
 #[derive(Debug)]
-pub enum SubscriberType { All, LocalOnly }
+pub enum SubscriberType {
+    All,
+    LocalOnly,
+}
 
 #[derive(Debug)]
 pub struct BroadcastPacketMessage {
@@ -91,12 +94,14 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
                     });
                 }
             }
-            MessengerOperations::Subscribe(msg) => {
-                match msg.typ {
-                    SubscriberType::All => { all_broadcast_list.insert(msg.conn_id); }
-                    SubscriberType::LocalOnly => { local_only_broadcast_list.insert(msg.conn_id); }
+            MessengerOperations::Subscribe(msg) => match msg.typ {
+                SubscriberType::All => {
+                    all_broadcast_list.insert(msg.conn_id);
                 }
-            }
+                SubscriberType::LocalOnly => {
+                    local_only_broadcast_list.insert(msg.conn_id);
+                }
+            },
             MessengerOperations::New(msg) => {
                 connection_map.insert(msg.conn_id, msg.socket);
             }

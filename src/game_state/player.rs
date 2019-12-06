@@ -1,4 +1,4 @@
-use super::super::minecraft_protocol::ChunkSection;
+use super::super::minecraft_protocol::{float_to_angle, ChunkSection};
 use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
 use super::packet::{
     ChunkData, ClientboundPlayerPositionAndLook, EntityLookAndMove, JoinGame, Packet, PlayerInfo,
@@ -14,6 +14,8 @@ pub enum PlayerStateOperations {
     New(NewPlayerMessage),
     Report(ReportMessage),
     Move(PlayerMovementMessage),
+    Look(PlayerLookMessage),
+    MoveAndLook(PlayerMoveAndLookMessage),
 }
 
 #[derive(Debug, Clone)]
@@ -22,6 +24,7 @@ pub struct Player {
     pub uuid: Uuid,
     pub name: String,
     pub position: Position,
+    pub angle: Angle,
     pub entity_id: i32,
 }
 
@@ -33,6 +36,12 @@ pub struct Position {
     pub x: f64,
     pub y: f64,
     pub z: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct Angle {
+    pub pitch: f32,
+    pub yaw: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +76,19 @@ pub struct ReportMessage {
 pub struct PlayerMovementMessage {
     pub conn_id: Uuid,
     pub new_position: Position,
+}
+
+#[derive(Debug)]
+pub struct PlayerMoveAndLookMessage {
+    pub conn_id: Uuid,
+    pub new_position: Position,
+    pub new_angle: Angle,
+}
+
+#[derive(Debug)]
+pub struct PlayerLookMessage {
+    pub conn_id: Uuid,
+    pub new_angle: Angle,
 }
 
 pub fn start(receiver: Receiver<PlayerStateOperations>, messenger: Sender<MessengerOperations>) {
@@ -137,8 +159,8 @@ pub fn start(receiver: Receiver<PlayerStateOperations>, messenger: Sender<Messen
                         delta_x: position_delta.x,
                         delta_y: position_delta.y,
                         delta_z: position_delta.z,
-                        yaw: 0,
-                        pitch: 0,
+                        yaw: float_to_angle(player.angle.yaw),
+                        pitch: float_to_angle(player.angle.pitch),
                         on_ground: false,
                     }),
                     Some(player.conn_id),
@@ -146,6 +168,51 @@ pub fn start(receiver: Receiver<PlayerStateOperations>, messenger: Sender<Messen
                 )
                 .unwrap();
                 player_clone.position = msg.new_position;
+                players.insert(msg.conn_id, player_clone);
+            }
+            PlayerStateOperations::Look(msg) => {
+                let player = players.get(&msg.conn_id).unwrap();
+                let mut player_clone = player.clone();
+                broadcast_packet!(
+                    messenger,
+                    Packet::EntityLookAndMove(EntityLookAndMove {
+                        entity_id: player.entity_id,
+                        delta_x: 0,
+                        delta_y: 0,
+                        delta_z: 0,
+                        yaw: float_to_angle(msg.new_angle.yaw),
+                        pitch: float_to_angle(msg.new_angle.pitch),
+                        on_ground: false,
+                    }),
+                    Some(player.conn_id),
+                    true
+                )
+                .unwrap();
+                player_clone.angle = msg.new_angle;
+                players.insert(msg.conn_id, player_clone);
+            }
+            PlayerStateOperations::MoveAndLook(msg) => {
+                let player = players.get(&msg.conn_id).unwrap();
+                let mut player_clone = player.clone();
+                let position_delta =
+                    PositionDelta::new(player_clone.position, msg.new_position.clone());
+                broadcast_packet!(
+                    messenger,
+                    Packet::EntityLookAndMove(EntityLookAndMove {
+                        entity_id: player.entity_id,
+                        delta_x: position_delta.x,
+                        delta_y: position_delta.y,
+                        delta_z: position_delta.z,
+                        yaw: float_to_angle(msg.new_angle.yaw),
+                        pitch: float_to_angle(msg.new_angle.pitch),
+                        on_ground: false,
+                    }),
+                    Some(player.conn_id),
+                    true
+                )
+                .unwrap();
+                player_clone.position = msg.new_position;
+                player_clone.angle = msg.new_angle;
                 players.insert(msg.conn_id, player_clone);
             }
             PlayerStateOperations::Report(msg) => {

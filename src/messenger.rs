@@ -64,13 +64,12 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
 
     while let Ok(msg) = receiver.recv() {
         match msg {
-            MessengerOperations::Send(msg) => match connection_map.get(&msg.conn_id) {
-                Some(socket) => {
+            MessengerOperations::Send(msg) => {
+                if let Some(socket) = connection_map.get(&msg.conn_id) {
                     let mut socket_clone = socket.try_clone().unwrap();
                     write(&mut socket_clone, msg.packet);
                 }
-                None => {}
-            },
+            }
             MessengerOperations::Broadcast(msg) => {
                 // Alright this local thing is confusing- we should think about renaming it. The
                 // problem is local users (ones who connected to us directly) want to know about

@@ -2,7 +2,7 @@ use super::game_state::block;
 use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player;
-use super::game_state::player::{NewPlayerMessage, Player, PlayerStateOperations, Position};
+use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOperations, Position};
 use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage};
 use super::packet;
 use super::packet::Packet;
@@ -52,6 +52,10 @@ fn confirm_login(
             x: 5.0,
             y: 16.0,
             z: 5.0,
+        },
+        angle: Angle {
+            pitch: 0.0,
+            yaw: 0.0,
         },
     };
 

@@ -47,6 +47,16 @@ packet_boilerplate!(
             (on_ground, Boolean)
         ]
     ),
+    (
+        3,
+        PlayerLook,
+        0x12,
+        [
+            (yaw, Float),
+            (pitch, Float),
+            (on_ground, Boolean)
+        ]
+    ),
     (6, ReportState, 0x1, []),
     (99, Pong, 1, [(payload, Long)]),
     (99, StatusResponse, 0, [(json_response, String)]),

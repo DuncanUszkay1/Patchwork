@@ -39,8 +39,11 @@ pub struct SendPacketMessage {
 #[derive(Debug)]
 pub struct SubscribeMessage {
     pub conn_id: Uuid,
-    pub local: bool,
+    pub typ: SubscriberType
 }
+
+#[derive(Debug)]
+pub enum SubscriberType { All, LocalOnly }
 
 #[derive(Debug)]
 pub struct BroadcastPacketMessage {
@@ -57,10 +60,8 @@ pub struct NewConnectionMessage {
 
 pub fn start(receiver: Receiver<MessengerOperations>) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();
-    // Connections that want all packets- including those from our peers
-    let mut local_broadcast_list = HashSet::<Uuid>::new();
-    // Connections that only want packets that involve events that occur on our server
-    let mut broadcast_list = HashSet::<Uuid>::new();
+    let mut local_only_broadcast_list = HashSet::<Uuid>::new();
+    let mut all_broadcast_list = HashSet::<Uuid>::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {
@@ -71,15 +72,9 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
                 }
             }
             MessengerOperations::Broadcast(msg) => {
-                // Alright this local thing is confusing- we should think about renaming it. The
-                // problem is local users (ones who connected to us directly) want to know about
-                // our peers (so they want to know about non-local packets) and non-local users
-                // only want to know about local packets
-                let mut broadcast_count = 0;
-                (&local_broadcast_list).iter().for_each(|conn_id| {
+                (&all_broadcast_list).iter().for_each(|conn_id| {
                     if msg.source_conn_id.is_none() || msg.source_conn_id.unwrap() != *conn_id {
                         if let Some(socket) = connection_map.get(&conn_id) {
-                            broadcast_count += 1;
                             let mut socket_clone = socket.try_clone().unwrap();
                             let packet_clone = msg.packet.clone();
                             write(&mut socket_clone, packet_clone);
@@ -87,9 +82,8 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
                     }
                 });
                 if msg.local {
-                    (&broadcast_list).iter().for_each(|conn_id| {
+                    (&local_only_broadcast_list).iter().for_each(|conn_id| {
                         if let Some(socket) = connection_map.get(&conn_id) {
-                            broadcast_count += 1;
                             let mut socket_clone = socket.try_clone().unwrap();
                             let packet_clone = msg.packet.clone();
                             write(&mut socket_clone, packet_clone);
@@ -98,10 +92,9 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
                 }
             }
             MessengerOperations::Subscribe(msg) => {
-                if msg.local {
-                    local_broadcast_list.insert(msg.conn_id);
-                } else {
-                    broadcast_list.insert(msg.conn_id);
+                match msg.typ {
+                    SubscriberType::All => { all_broadcast_list.insert(msg.conn_id); }
+                    SubscriberType::LocalOnly => { local_only_broadcast_list.insert(msg.conn_id); }
                 }
             }
             MessengerOperations::New(msg) => {

@@ -3,7 +3,7 @@ use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player;
 use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOperations, Position};
-use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage};
+use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage, SubscriberType};
 use super::packet;
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
@@ -79,7 +79,7 @@ fn confirm_login(
     messenger
         .send(MessengerOperations::Subscribe(SubscribeMessage {
             conn_id,
-            local: true,
+            typ: SubscriberType::All,
         }))
         .unwrap();
 

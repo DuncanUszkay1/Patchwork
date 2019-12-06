@@ -46,6 +46,10 @@ pub struct ChunkSection {
     pub sky_light: Vec<u64>,   //2048 bytes (all 1s)
 }
 
+pub fn float_to_angle(f: f32) -> u8 {
+    ((f / 360.0) * 256.0) as u8
+}
+
 pub fn read_var_int<S: Read>(stream: &mut S) -> Result<i32, Error> {
     let mut num_read = 0;
     let mut result: i32 = 0;

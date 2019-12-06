@@ -11,7 +11,7 @@ impl<O> ServiceInstance<O> {
         let (sender, receiver) = channel();
         ServiceInstance {
             receiver: Some(receiver),
-            sender
+            sender,
         }
     }
 
@@ -21,8 +21,10 @@ impl<O> ServiceInstance<O> {
 
     pub fn receiver(&mut self) -> Receiver<O> {
         match self.receiver.take() {
-            Some(receiver) => { receiver }
-            _ => { panic!("failed to extract receiver from service- is it already on?"); }
+            Some(receiver) => receiver,
+            _ => {
+                panic!("failed to extract receiver from service- is it already on?");
+            }
         }
     }
 }

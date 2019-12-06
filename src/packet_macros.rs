@@ -18,7 +18,6 @@ macro_rules! packet_boilerplate {
             match (state,id) {
                 $( ($state, $id) => { Packet::$name($name::new(stream)) } )*
                 _ => {
-                    //println!("unknown packet state/id {:?}/{:x}", state, id);
                     Packet::Unknown
                 }
             }

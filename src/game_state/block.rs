@@ -1,8 +1,7 @@
 use super::super::minecraft_protocol::ChunkSection;
-use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
+use super::messenger::{MessengerOperations, SendPacketMessage};
 use super::packet::{ChunkData, Packet};
-use std::collections::HashMap;
-use std::convert::TryInto;
+
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -19,10 +18,7 @@ pub struct ReportMessage {
     pub conn_id: Uuid,
 }
 
-pub fn start(
-    receiver: Receiver<BlockStateOperations>,
-    messenger: Sender<MessengerOperations>,
-) {
+pub fn start(receiver: Receiver<BlockStateOperations>, messenger: Sender<MessengerOperations>) {
     while let Ok(msg) = receiver.recv() {
         match msg {
             BlockStateOperations::Report(msg) => {

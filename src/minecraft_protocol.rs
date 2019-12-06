@@ -91,10 +91,10 @@ pub fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
         stream.read_long(); //read all air blocks
     }
     for _ in 0..2048 {
-        stream.read_u8();
+        stream.read_u8().unwrap();
     }
     for _ in 0..2048 {
-        stream.read_u8();
+        stream.read_u8().unwrap();
     }
     ChunkSection {
         bits_per_block: 14,
@@ -188,8 +188,7 @@ impl<T: Read> MinecraftProtocolReader for T {
             1 => true,
             0 => false,
             _ => {
-                println!("Error while unwrapping boolean");
-                false
+                panic!("Error while unwrapping boolean");
             }
         }
     }

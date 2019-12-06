@@ -128,13 +128,9 @@ fn translate(packet: Packet, translation_data: TranslationInfo) -> Packet {
             Packet::SpawnPlayer(translated_packet)
         }
         Packet::EntityLookAndMove(entity_look_and_move) => {
-            let old_id = entity_look_and_move.entity_id;
             let mut translated_packet = entity_look_and_move;
             translated_packet.entity_id =
                 translate_entity_id(translated_packet.entity_id, translation_data);
-            if old_id != translated_packet.entity_id {
-                println!("translated packet is {:?}", translated_packet);
-            }
             Packet::EntityLookAndMove(translated_packet)
         }
         Packet::ChunkData(chunk_data) => {

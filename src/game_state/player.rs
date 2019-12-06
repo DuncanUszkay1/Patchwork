@@ -1,8 +1,7 @@
-use super::super::minecraft_protocol::{float_to_angle, ChunkSection};
+use super::super::minecraft_protocol::float_to_angle;
 use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
 use super::packet::{
-    ChunkData, ClientboundPlayerPositionAndLook, EntityLookAndMove, JoinGame, Packet, PlayerInfo,
-    SpawnPlayer,
+    ClientboundPlayerPositionAndLook, EntityLookAndMove, JoinGame, Packet, PlayerInfo, SpawnPlayer,
 };
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -13,8 +12,6 @@ use uuid::Uuid;
 pub enum PlayerStateOperations {
     New(NewPlayerMessage),
     Report(ReportMessage),
-    Move(PlayerMovementMessage),
-    Look(PlayerLookMessage),
     MoveAndLook(PlayerMoveAndLookMessage),
 }
 
@@ -28,10 +25,7 @@ pub struct Player {
     pub entity_id: i32,
 }
 
-//This probably belongs at an entity level, but since we don't have a real concept of entities yet
-//this'll do
-//Ignoring angle since we haven't implemented that datatype just yet
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Position {
     pub x: f64,
     pub y: f64,
@@ -42,23 +36,6 @@ pub struct Position {
 pub struct Angle {
     pub pitch: f32,
     pub yaw: f32,
-}
-
-#[derive(Debug, Clone)]
-pub struct PositionDelta {
-    pub x: i16,
-    pub y: i16,
-    pub z: i16,
-}
-
-impl PositionDelta {
-    pub fn new(old_position: Position, new_position: Position) -> PositionDelta {
-        PositionDelta {
-            x: ((new_position.x * 32.0 - old_position.x * 32.0) * 128.0) as i16,
-            y: ((new_position.y * 32.0 - old_position.y * 32.0) * 128.0) as i16,
-            z: ((new_position.z * 32.0 - old_position.z * 32.0) * 128.0) as i16,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -73,185 +50,171 @@ pub struct ReportMessage {
 }
 
 #[derive(Debug)]
-pub struct PlayerMovementMessage {
-    pub conn_id: Uuid,
-    pub new_position: Position,
-}
-
-#[derive(Debug)]
 pub struct PlayerMoveAndLookMessage {
     pub conn_id: Uuid,
-    pub new_position: Position,
-    pub new_angle: Angle,
-}
-
-#[derive(Debug)]
-pub struct PlayerLookMessage {
-    pub conn_id: Uuid,
-    pub new_angle: Angle,
+    pub new_position: Option<Position>,
+    pub new_angle: Option<Angle>,
 }
 
 pub fn start(receiver: Receiver<PlayerStateOperations>, messenger: Sender<MessengerOperations>) {
     let mut players = HashMap::<Uuid, Player>::new();
 
     while let Ok(msg) = receiver.recv() {
-        match msg {
-            PlayerStateOperations::New(msg) => {
-                let mut player = msg.player;
-                player.entity_id = players.len().try_into().expect("too many players");
-                let join_game = JoinGame {
-                    entity_id: player.entity_id,
-                    gamemode: 1,
-                    dimension: 0,
-                    difficulty: 0,
-                    max_players: 2,
-                    level_type: String::from("default"),
-                    reduced_debug_info: false,
-                };
-                send_packet!(messenger, msg.conn_id, Packet::JoinGame(join_game)).unwrap();
-                let player_pos_and_look = ClientboundPlayerPositionAndLook {
-                    x: player.position.x,
-                    y: player.position.y,
-                    z: player.position.z,
-                    yaw: 0.0,
-                    pitch: 0.0,
-                    flags: 0,
-                    teleport_id: 0,
-                };
+        handle_message(msg, &mut players, messenger.clone())
+    }
+}
+
+fn handle_message(
+    msg: PlayerStateOperations,
+    players: &mut HashMap<Uuid, Player>,
+    messenger: Sender<MessengerOperations>,
+) {
+    match msg {
+        PlayerStateOperations::New(msg) => {
+            let mut player = msg.player;
+            player.entity_id = players.len().try_into().expect("too many players");
+            send_packet!(
+                messenger,
+                msg.conn_id,
+                Packet::JoinGame(player.join_game_packet())
+            )
+            .unwrap();
+            send_packet!(
+                messenger,
+                msg.conn_id,
+                Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_packet())
+            )
+            .unwrap();
+            players.insert(msg.conn_id, player);
+        }
+        PlayerStateOperations::MoveAndLook(msg) => {
+            players.entry(msg.conn_id).and_modify(|player| {
+                broadcast_packet!(
+                    messenger,
+                    Packet::EntityLookAndMove(
+                        player.move_and_look(msg.new_position, msg.new_angle)
+                    ),
+                    Some(player.conn_id),
+                    true
+                )
+                .unwrap()
+            });
+        }
+        PlayerStateOperations::Report(msg) => players.iter().for_each(|(conn_id, player)| {
+            if *conn_id != msg.conn_id {
                 send_packet!(
                     messenger,
                     msg.conn_id,
-                    Packet::ClientboundPlayerPositionAndLook(player_pos_and_look)
+                    Packet::PlayerInfo(player.player_info_packet())
                 )
                 .unwrap();
                 send_packet!(
                     messenger,
                     msg.conn_id,
-                    Packet::ChunkData(ChunkData {
-                        chunk_x: 0,
-                        chunk_z: 0,
-                        full_chunk: true,
-                        primary_bit_mask: 1,
-                        size: 12291, //I just calculated the length of this hardcoded chunk section
-                        data: ChunkSection {
-                            bits_per_block: 14,
-                            data_array_length: 896,
-                            block_ids: Vec::new(),
-                            block_light: Vec::new(),
-                            sky_light: Vec::new(),
-                        },
-                        biomes: vec![127; 256],
-                        number_of_block_entities: 0,
-                    })
+                    Packet::SpawnPlayer(player.spawn_player_packet())
                 )
                 .unwrap();
-                players.insert(msg.conn_id, player);
             }
-            PlayerStateOperations::Move(msg) => {
-                let player = players.get(&msg.conn_id).unwrap();
-                let mut player_clone = player.clone();
-                let position_delta =
-                    PositionDelta::new(player_clone.position, msg.new_position.clone());
-                broadcast_packet!(
-                    messenger,
-                    Packet::EntityLookAndMove(EntityLookAndMove {
-                        entity_id: player.entity_id,
-                        delta_x: position_delta.x,
-                        delta_y: position_delta.y,
-                        delta_z: position_delta.z,
-                        yaw: float_to_angle(player.angle.yaw),
-                        pitch: float_to_angle(player.angle.pitch),
-                        on_ground: false,
-                    }),
-                    Some(player.conn_id),
-                    true
-                )
-                .unwrap();
-                player_clone.position = msg.new_position;
-                players.insert(msg.conn_id, player_clone);
-            }
-            PlayerStateOperations::Look(msg) => {
-                let player = players.get(&msg.conn_id).unwrap();
-                let mut player_clone = player.clone();
-                broadcast_packet!(
-                    messenger,
-                    Packet::EntityLookAndMove(EntityLookAndMove {
-                        entity_id: player.entity_id,
-                        delta_x: 0,
-                        delta_y: 0,
-                        delta_z: 0,
-                        yaw: float_to_angle(msg.new_angle.yaw),
-                        pitch: float_to_angle(msg.new_angle.pitch),
-                        on_ground: false,
-                    }),
-                    Some(player.conn_id),
-                    true
-                )
-                .unwrap();
-                player_clone.angle = msg.new_angle;
-                players.insert(msg.conn_id, player_clone);
-            }
-            PlayerStateOperations::MoveAndLook(msg) => {
-                let player = players.get(&msg.conn_id).unwrap();
-                let mut player_clone = player.clone();
-                let position_delta =
-                    PositionDelta::new(player_clone.position, msg.new_position.clone());
-                broadcast_packet!(
-                    messenger,
-                    Packet::EntityLookAndMove(EntityLookAndMove {
-                        entity_id: player.entity_id,
-                        delta_x: position_delta.x,
-                        delta_y: position_delta.y,
-                        delta_z: position_delta.z,
-                        yaw: float_to_angle(msg.new_angle.yaw),
-                        pitch: float_to_angle(msg.new_angle.pitch),
-                        on_ground: false,
-                    }),
-                    Some(player.conn_id),
-                    true
-                )
-                .unwrap();
-                player_clone.position = msg.new_position;
-                player_clone.angle = msg.new_angle;
-                players.insert(msg.conn_id, player_clone);
-            }
-            PlayerStateOperations::Report(msg) => {
-                players.iter().for_each(|(conn_id, player)| {
-                    if *conn_id != msg.conn_id {
-                        let player_clone = player.clone();
-                        send_packet!(
-                            messenger,
-                            msg.conn_id,
-                            Packet::PlayerInfo(PlayerInfo {
-                                action: 0,
-                                number_of_players: 1, //send each player in an individual packet for now
-                                uuid: player_clone.uuid.as_u128(),
-                                name: player_clone.name.clone(),
-                                number_of_properties: 0,
-                                gamemode: 1,
-                                ping: 100,
-                                has_display_name: false,
-                            })
-                        )
-                        .unwrap();
-                        send_packet!(
-                            messenger,
-                            msg.conn_id,
-                            Packet::SpawnPlayer(SpawnPlayer {
-                                entity_id: player.entity_id,
-                                uuid: player_clone.uuid.as_u128(),
-                                x: player_clone.position.x,
-                                y: player_clone.position.y,
-                                z: player_clone.position.z,
-                                yaw: 0,
-                                pitch: 0,
-                                entity_metadata_terminator: 0xff,
-                            })
-                        )
-                        .unwrap();
-                    }
-                })
-            }
+        }),
+    }
+}
+
+impl Player {
+    pub fn move_and_look(
+        &mut self,
+        new_position: Option<Position>,
+        new_angle: Option<Angle>,
+    ) -> EntityLookAndMove {
+        if let Some(new_angle) = new_angle {
+            self.angle = new_angle;
+        }
+        let update_packet = self.entity_look_and_move_packet(new_position);
+        if let Some(new_position) = new_position {
+            self.position = new_position;
+        }
+        update_packet
+    }
+
+    pub fn join_game_packet(&self) -> JoinGame {
+        JoinGame {
+            entity_id: self.entity_id,
+            gamemode: 1,
+            dimension: 0,
+            difficulty: 0,
+            max_players: 2,
+            level_type: String::from("default"),
+            reduced_debug_info: false,
+        }
+    }
+
+    pub fn pos_and_look_packet(&self) -> ClientboundPlayerPositionAndLook {
+        ClientboundPlayerPositionAndLook {
+            x: self.position.x,
+            y: self.position.y,
+            z: self.position.z,
+            yaw: 0.0,
+            pitch: 0.0,
+            flags: 0,
+            teleport_id: 0,
+        }
+    }
+
+    fn entity_look_and_move_packet(&self, new_position: Option<Position>) -> EntityLookAndMove {
+        let position_delta = PositionDelta::new(self.position, new_position);
+        EntityLookAndMove {
+            entity_id: self.entity_id,
+            delta_x: position_delta.x,
+            delta_y: position_delta.y,
+            delta_z: position_delta.z,
+            yaw: float_to_angle(self.angle.yaw),
+            pitch: float_to_angle(self.angle.pitch),
+            on_ground: false,
+        }
+    }
+
+    fn player_info_packet(&self) -> PlayerInfo {
+        PlayerInfo {
+            action: 0,
+            number_of_players: 1, //send each player in an individual packet for now
+            uuid: self.uuid.as_u128(),
+            name: self.name.clone(),
+            number_of_properties: 0,
+            gamemode: 1,
+            ping: 100,
+            has_display_name: false,
+        }
+    }
+
+    fn spawn_player_packet(&self) -> SpawnPlayer {
+        SpawnPlayer {
+            entity_id: self.entity_id,
+            uuid: self.uuid.as_u128(),
+            x: self.position.x,
+            y: self.position.y,
+            z: self.position.z,
+            yaw: 0,
+            pitch: 0,
+            entity_metadata_terminator: 0xff,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PositionDelta {
+    pub x: i16,
+    pub y: i16,
+    pub z: i16,
+}
+
+impl PositionDelta {
+    pub fn new(old_position: Position, new_position: Option<Position>) -> PositionDelta {
+        match new_position {
+            Some(position) => PositionDelta {
+                x: ((position.x * 32.0 - old_position.x * 32.0) * 128.0) as i16,
+                y: ((position.y * 32.0 - old_position.y * 32.0) * 128.0) as i16,
+                z: ((position.z * 32.0 - old_position.z * 32.0) * 128.0) as i16,
+            },
+            None => PositionDelta { x: 0, y: 0, z: 0 },
         }
     }
 }

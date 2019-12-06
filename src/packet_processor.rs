@@ -34,7 +34,7 @@ pub struct InboundPacketMessage {
 #[derive(Debug)]
 pub struct TranslationDataMessage {
     pub conn_id: Uuid,
-    pub update: TranslationUpdates,
+    pub updates: Vec<TranslationUpdates>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -62,16 +62,16 @@ impl TranslationInfo {
         }
     }
 
-    pub fn update(&mut self, params: TranslationUpdates) {
-        match params {
+    pub fn update(&mut self, param: &TranslationUpdates) {
+        match param {
             TranslationUpdates::State(state) => {
-                self.state = state;
+                self.state = *state;
             }
             TranslationUpdates::EntityIdBlock(block) => {
-                self.entity_id_block = block;
+                self.entity_id_block = *block;
             }
             TranslationUpdates::XOrigin(x) => {
-                self.map.x_origin = x;
+                self.map.x_origin = *x;
             }
             TranslationUpdates::NoChange => {}
         }
@@ -96,7 +96,7 @@ pub fn start_inbound(
 
                 let packet = read(&mut msg.cursor.clone(), translation_data.state);
                 let packet = translate(packet, *translation_data);
-                translation_data.update(packet_router::route_packet(
+                translation_data.update(&packet_router::route_packet(
                     packet,
                     translation_data.state,
                     msg.conn_id,
@@ -107,10 +107,13 @@ pub fn start_inbound(
                 ));
             }
             PacketProcessorOperations::SetTranslationData(msg) => {
-                translation_data
+                let data = translation_data
                     .entry(msg.conn_id)
-                    .or_insert_with(TranslationInfo::new)
-                    .update(msg.update);
+                    .or_insert_with(TranslationInfo::new);
+
+                msg.updates.iter().for_each(|update| {
+                    data.update(update);
+                })
             }
         }
     }

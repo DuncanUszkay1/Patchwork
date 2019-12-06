@@ -98,23 +98,11 @@ impl Map {
             .send(PacketProcessorOperations::SetTranslationData(
                 TranslationDataMessage {
                     conn_id: self.conn_id,
-                    update: TranslationUpdates::State(5),
-                },
-            ))
-            .unwrap();
-        inbound_packet_processor
-            .send(PacketProcessorOperations::SetTranslationData(
-                TranslationDataMessage {
-                    conn_id: self.conn_id,
-                    update: TranslationUpdates::EntityIdBlock(self.entity_id_block),
-                },
-            ))
-            .unwrap();
-        inbound_packet_processor
-            .send(PacketProcessorOperations::SetTranslationData(
-                TranslationDataMessage {
-                    conn_id: self.conn_id,
-                    update: TranslationUpdates::XOrigin(self.position.x),
+                    updates: vec![
+                        TranslationUpdates::State(5),
+                        TranslationUpdates::EntityIdBlock(self.entity_id_block),
+                        TranslationUpdates::XOrigin(self.position.x),
+                    ],
                 },
             ))
             .unwrap();

@@ -9,6 +9,10 @@ use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
 // needs to be renamed, just didn't want to make another one of these
-pub fn init_incoming_peer_sub(packet: Packet, conn_id: Uuid, messenger: Sender<MessengerOperations>) {
+pub fn init_incoming_peer_sub(
+    packet: Packet,
+    conn_id: Uuid,
+    messenger: Sender<MessengerOperations>,
+) {
     broadcast_packet!(messenger, packet, None, false).unwrap();
 }

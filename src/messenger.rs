@@ -1,12 +1,8 @@
-#![feature(option_result_contains)]
-
-use super::keep_alive::{KeepAliveOperations, NewKeepAliveConnectionMessage};
 use super::packet::{write, Packet};
 use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Receiver;
 use uuid::Uuid;
-use std::thread;
 
 macro_rules! send_packet {
     ($messenger:expr, $conn_id:expr, $packet:expr) => {
@@ -22,7 +18,7 @@ macro_rules! broadcast_packet {
         $messenger.send(MessengerOperations::Broadcast(BroadcastPacketMessage {
             packet: $packet,
             source_conn_id: $source_conn_id,
-            local: $local
+            local: $local,
         }))
     };
 }
@@ -43,14 +39,14 @@ pub struct SendPacketMessage {
 #[derive(Debug)]
 pub struct SubscribeMessage {
     pub conn_id: Uuid,
-    pub local: bool
+    pub local: bool,
 }
 
 #[derive(Debug)]
 pub struct BroadcastPacketMessage {
     pub packet: Packet,
     pub source_conn_id: Option<Uuid>,
-    pub local: bool
+    pub local: bool,
 }
 
 #[derive(Debug)]
@@ -59,9 +55,7 @@ pub struct NewConnectionMessage {
     pub socket: TcpStream,
 }
 
-pub fn start(
-    receiver: Receiver<MessengerOperations>
-) {
+pub fn start(receiver: Receiver<MessengerOperations>) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();
     // Connections that want all packets- including those from our peers
     let mut local_broadcast_list = HashSet::<Uuid>::new();
@@ -72,22 +66,17 @@ pub fn start(
         match msg {
             MessengerOperations::Send(msg) => match connection_map.get(&msg.conn_id) {
                 Some(socket) => {
-                    //println!("sending {:?}", msg.packet);
                     let mut socket_clone = socket.try_clone().unwrap();
                     write(&mut socket_clone, msg.packet);
                 }
-                None => {
-                    println!("messenger.rs failed to find the conn id {:?}", msg.conn_id);
-                }
+                None => {}
             },
             MessengerOperations::Broadcast(msg) => {
                 // Alright this local thing is confusing- we should think about renaming it. The
                 // problem is local users (ones who connected to us directly) want to know about
                 // our peers (so they want to know about non-local packets) and non-local users
                 // only want to know about local packets
-                //println!("broadcasting {:?}", msg.packet);
                 let mut broadcast_count = 0;
-                println!("locals: {:?}, other: {:?}", local_broadcast_list, broadcast_list);
                 (&local_broadcast_list).iter().for_each(|conn_id| {
                     if msg.source_conn_id.is_none() || msg.source_conn_id.unwrap() != *conn_id {
                         if let Some(socket) = connection_map.get(&conn_id) {
@@ -98,10 +87,8 @@ pub fn start(
                         }
                     }
                 });
-                if msg.local == true {
-                    println!("sending out local packet..");
+                if msg.local {
                     (&broadcast_list).iter().for_each(|conn_id| {
-                        //println!("broadcasting to {:?}", conn_id);
                         if let Some(socket) = connection_map.get(&conn_id) {
                             broadcast_count += 1;
                             let mut socket_clone = socket.try_clone().unwrap();
@@ -110,12 +97,12 @@ pub fn start(
                         }
                     });
                 }
-                println!("broadcast sent to {:?}", broadcast_count);
             }
             MessengerOperations::Subscribe(msg) => {
-                match msg.local {
-                    true => { local_broadcast_list.insert(msg.conn_id); },
-                    false => { broadcast_list.insert(msg.conn_id); }
+                if msg.local {
+                    local_broadcast_list.insert(msg.conn_id);
+                } else {
+                    broadcast_list.insert(msg.conn_id);
                 }
             }
             MessengerOperations::New(msg) => {

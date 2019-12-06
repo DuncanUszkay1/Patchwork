@@ -1,4 +1,3 @@
-use super::super::minecraft_protocol::ChunkSection;
 use super::game_state::block;
 use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::PatchworkStateOperations;
@@ -31,7 +30,7 @@ pub fn init_login(
             );
         }
         _ => {
-            println!("Login failed");
+            panic!("Login failed");
         }
     }
 }
@@ -74,7 +73,10 @@ fn confirm_login(
         .unwrap();
 
     messenger
-        .send(MessengerOperations::Subscribe(SubscribeMessage { conn_id, local: true }))
+        .send(MessengerOperations::Subscribe(SubscribeMessage {
+            conn_id,
+            local: true,
+        }))
         .unwrap();
 
     //report current state to player (soon to be in it's own component for reuse)
@@ -84,7 +86,6 @@ fn confirm_login(
             conn_id,
         }))
         .unwrap();
-
 
     patchwork_state
         .send(PatchworkStateOperations::Report)

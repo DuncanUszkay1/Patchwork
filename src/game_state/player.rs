@@ -1,6 +1,9 @@
-use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
 use super::super::minecraft_protocol::ChunkSection;
-use super::packet::{EntityLookAndMove, Packet, PlayerInfo, SpawnPlayer, JoinGame,ClientboundPlayerPositionAndLook, ChunkData};
+use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
+use super::packet::{
+    ChunkData, ClientboundPlayerPositionAndLook, EntityLookAndMove, JoinGame, Packet, PlayerInfo,
+    SpawnPlayer,
+};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::mpsc::Receiver;
@@ -66,10 +69,7 @@ pub struct PlayerMovementMessage {
     pub new_position: Position,
 }
 
-pub fn start(
-    receiver: Receiver<PlayerStateOperations>,
-    messenger: Sender<MessengerOperations>,
-) {
+pub fn start(receiver: Receiver<PlayerStateOperations>, messenger: Sender<MessengerOperations>) {
     let mut players = HashMap::<Uuid, Player>::new();
 
     while let Ok(msg) = receiver.recv() {
@@ -77,7 +77,6 @@ pub fn start(
             PlayerStateOperations::New(msg) => {
                 let mut player = msg.player;
                 player.entity_id = players.len().try_into().expect("too many players");
-                println!("{:?}", player);
                 let join_game = JoinGame {
                     entity_id: player.entity_id,
                     gamemode: 1,

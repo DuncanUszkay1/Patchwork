@@ -22,7 +22,10 @@ pub fn init_outgoing_peer_sub(
     //at which time we set them as a subscriber before entering this state
 
     messenger
-        .send(MessengerOperations::Subscribe(SubscribeMessage { conn_id, local: false }))
+        .send(MessengerOperations::Subscribe(SubscribeMessage {
+            conn_id,
+            local: false,
+        }))
         .unwrap();
 
     //report current state to player (soon to be in it's own component for reuse)

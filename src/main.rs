@@ -14,14 +14,11 @@ mod packet_processor;
 mod packet_router;
 mod server;
 
-use keep_alive::start_keep_alive;
-use packet_processor::start_inbound;
-use service::{ServiceInstance};
 use game_state::patchwork::{NewMapMessage, PatchworkStateOperations, Peer};
+use service::ServiceInstance;
 
-use std::sync::mpsc::Sender;
 use std::env;
-use std::sync::mpsc::channel;
+
 use std::thread;
 
 fn main() {
@@ -50,6 +47,11 @@ fn main() {
             module: packet_processor::start_inbound,
             name: inbound_packet_processor,
             dependencies: [messenger, player_state, block_state, patchwork_state]
+        ),
+        (
+            module: keep_alive::start,
+            name: keep_alive,
+            dependencies: [messenger]
         )
     );
 
@@ -67,8 +69,5 @@ fn main() {
         }))
         .unwrap();
 
-    server::listen(
-        inbound_packet_processor.sender(),
-        messenger.sender(),
-    );
+    server::listen(inbound_packet_processor.sender(), messenger.sender());
 }

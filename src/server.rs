@@ -19,7 +19,6 @@ pub fn listen(
     let listener = TcpListener::bind(format!("127.0.0.1:{}", env::var("PORT").unwrap())).unwrap();
 
     for stream in listener.incoming() {
-        //println!("connection");
         let stream = stream.unwrap();
         let inbound_packet_processor_clone = inbound_packet_processor.clone();
         let messenger_clone = messenger.clone();
@@ -70,7 +69,7 @@ pub fn handle_connection(
                 match e.kind() {
                     io::ErrorKind::UnexpectedEof => {}
                     _ => {
-                        println!("conn closed due to {:?}", e);
+                        panic!("conn closed due to {:?}", e);
                     }
                 };
                 break;

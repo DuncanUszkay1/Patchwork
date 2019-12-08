@@ -1,6 +1,6 @@
 macro_rules! packet_boilerplate {
     ( $( ( $state:pat, $name:ident, $id:expr, [
-     $( ($fieldname:ident, $datatype:ident)),*
+     $( ($fieldname:ident, $datatype:ident, $transtype:ident)),*
     ])),*) => (
         //Create an enum with a struct variant for each packet we've defined
         //and a special variant for a packet we haven't defined
@@ -29,7 +29,7 @@ macro_rules! packet_boilerplate {
             match packet {
                 $(Packet::$name(packet) => {
                     write_var_int(&mut cursor, $name::ID);
-                    packet.write(&mut cursor)
+                    packet.write_fields(&mut cursor)
                 })*
                 _ => { panic!("I don't know how to write this packet {:?}", packet) }
             }
@@ -51,23 +51,22 @@ macro_rules! packet_boilerplate {
             stream.write_all(&byte_vec).unwrap();
         }
 
+        pub fn translate(packet: Packet, translation_info: TranslationInfo) -> Packet {
+            match packet {
+                $(Packet::$name(packet) => {
+                    Packet::$name(packet.translate(translation_info))
+                })*
+                Packet::Unknown => { Packet::Unknown }
+            }
+        }
+
         //Define the packet struct
-        $(packet!{$name, $id, [ $( ($fieldname, $datatype)),*]})*
+        $(packet!{$name, $id, [ $( ($fieldname, $datatype, $transtype)),*]})*
     )
 }
 
-//Example: packet!(0, Handshake, 0, [ (somefield, VarInt) ] becomes:
-//pub struct Handshake { somefield: u64 }
-//impl Handshake {
-//  pub fn new(stream) -> Handshake {
-//    Handshake { somefiled: stream.read_var_int() }
-//  }
-//  pub fn write(self, stream) -> Handshake {
-//    stream.write_var_int(self.somefield)
-//  }
-//}
 macro_rules! packet {
-    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident)),* ]) => (
+    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident, $transtype:ident)),+]) => (
         #[derive(Debug, Clone)]
         pub struct $name { $(pub $fieldname: mc_to_rust_datatype!($datatype)),* }
         impl $name {
@@ -75,8 +74,27 @@ macro_rules! packet {
             pub fn new<S: MinecraftProtocolReader>(stream: &mut S) -> $name {
                 $name { $( $fieldname: read_packet_field!(stream, $datatype) ),* }
             }
-            pub fn write<S: MinecraftProtocolWriter>(&self, stream: &mut S) {
+            pub fn write_fields<S: MinecraftProtocolWriter>(&self, stream: &mut S) {
                 $( write_packet_field!(stream, self.$fieldname.clone(), $datatype) );*
+            }
+            pub fn translate(&self, translation_data: TranslationInfo) -> $name {
+                let mut translated = self.clone();
+                $(translated.$fieldname = translate_packet_field!(self.$fieldname.clone(), translation_data, $transtype); )*
+                translated
+            }
+        }
+    );
+    ($name:ident, $id:expr, []) => (
+        #[derive(Debug, Clone)]
+        pub struct $name {}
+        impl $name {
+            const ID: i32 = $id;
+            pub fn new<S: MinecraftProtocolReader>(stream: &mut S) -> $name {
+                $name {}
+            }
+            pub fn write_fields<S: MinecraftProtocolWriter>(&self, stream: &mut S) {}
+            pub fn translate(&self, translation_data: TranslationInfo) -> $name {
+                self.clone()
             }
         }
     )
@@ -217,5 +235,20 @@ macro_rules! write_packet_field {
     };
     ($stream:ident, $value:expr, ChunkSection) => {
         $stream.write_chunk_section($value)
+    };
+}
+
+macro_rules! translate_packet_field {
+    ($value:expr, $transdata:expr, Untranslated) => {
+        $value
+    };
+    ($value:expr, $transdata:expr, EntityId) => {
+        $value + ($transdata.entity_id_block * ENTITY_ID_BLOCK_SIZE)
+    };
+    ($value:expr, $transdata:expr, XChunk) => {
+        $transdata.map.x_origin
+    };
+    ($value:expr, $transdata:expr, XEntity) => {
+        $value + ($transdata.map.x_origin * CHUNK_SIZE) as f64
     };
 }

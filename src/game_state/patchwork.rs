@@ -10,6 +10,9 @@ use std::sync::mpsc::Sender;
 use std::thread;
 use uuid::Uuid;
 
+pub const ENTITY_ID_BLOCK_SIZE: i32 = 1000;
+pub const CHUNK_SIZE: i32 = 16;
+
 pub enum PatchworkStateOperations {
     New(NewMapMessage),
     Report,

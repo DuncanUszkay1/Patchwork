@@ -3,8 +3,7 @@ use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player::PlayerStateOperations;
 use super::gameplay_router;
 use super::initiation_protocols::{
-    border_cross_login, client_ping, handshake, in_peer_sub, login,
-    out_peer_sub,
+    border_cross_login, client_ping, handshake, in_peer_sub, login, out_peer_sub,
 };
 use super::messenger::MessengerOperations;
 use super::packet::Packet;

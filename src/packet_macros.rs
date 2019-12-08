@@ -16,7 +16,17 @@ macro_rules! packet_boilerplate {
             //call the initializer method of the packet class associated with
             //this state and packet id combination
             match (state,id) {
-                $( ($state, $id) => { Packet::$name($name::new(stream)) } )*
+                $( ($state, $id) => {
+                    let packet = Packet::$name($name::new(stream));
+                    if stream.bytes().next().is_some() {
+                        panic!(
+                            "Failed to read entire buffer for packet with id {:?} in state {:?}",
+                            id,
+                            state
+                        );
+                    }
+                    packet
+                } )*
                 _ => {
                     Packet::Unknown
                 }

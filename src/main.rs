@@ -18,10 +18,28 @@ use game_state::patchwork::{NewMapMessage, PatchworkStateOperations, Peer};
 use service::ServiceInstance;
 
 use std::env;
-
 use std::thread;
 
+#[macro_use]
+extern crate log;
+extern crate simplelog;
+use simplelog::{Config, LevelFilter, SimpleLogger};
+
+const DEFAULT_LOGGING_LEVEL: LevelFilter = LevelFilter::Info;
+
 fn main() {
+    let level = match env::var("LOG") {
+        Ok(level) => match level.as_str() {
+            "info" => LevelFilter::Info,
+            "trace" => LevelFilter::Trace,
+            "error" => LevelFilter::Error,
+            _ => DEFAULT_LOGGING_LEVEL,
+        },
+        Err(_) => DEFAULT_LOGGING_LEVEL,
+    };
+
+    SimpleLogger::init(level, Config::default()).unwrap();
+
     define_services!(
         (
             module: game_state::player::start,
@@ -54,6 +72,8 @@ fn main() {
             dependencies: [messenger]
         )
     );
+
+    trace!("Services Started");
 
     // the stuff below this should also probably be moved to a service model
     let peer_address = String::from("127.0.0.1");

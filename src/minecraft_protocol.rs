@@ -3,6 +3,9 @@ extern crate byteorder;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Error, Read, Write};
 
+const PALETTE_SIZE: i64 = 14; // We don't define our own palette, so we just use the default all blocks palette which is 14 bits
+const DEFAULT_BLOCK: i64 = 3;
+
 pub trait MinecraftProtocolReader {
     fn read_unsigned_short(&mut self) -> u16;
     fn read_short(&mut self) -> i16;
@@ -73,8 +76,14 @@ pub fn read_var_int<S: Read>(stream: &mut S) -> Result<i32, Error> {
 pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
     stream.write_u_byte(v.bits_per_block);
     stream.write_var_int(v.data_array_length);
-    for _ in 0..896 {
-        stream.write_long(1_000_000_000_000); //write all air blocks
+    //This only works perfectly for 1,2,3 for reasons I have yet to decipher
+    let mut long = 0;
+    for i in 0..4096 {
+        long += DEFAULT_BLOCK << ((PALETTE_SIZE * i) % 64);
+        if ((i * PALETTE_SIZE) % 64) >= 64 - PALETTE_SIZE {
+            stream.write_long(long);
+            long = 0;
+        }
     }
     for _ in 0..2048 {
         stream

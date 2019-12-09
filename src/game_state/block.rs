@@ -18,11 +18,30 @@ pub struct ReportMessage {
     pub conn_id: Uuid,
 }
 
+fn fill_dummy_block_ids(ids: &mut Vec<i32>) {
+    //just some random pattern
+    while ids.len() < 4096 {
+        match ids.len() % 2 {
+            0 => {
+                ids.push(5);
+            }
+            1 => {
+                ids.push(3);
+            }
+            _ => {
+                panic!("if this happens, all hope is lost");
+            }
+        }
+    }
+}
+
 pub fn start(receiver: Receiver<BlockStateOperations>, messenger: Sender<MessengerOperations>) {
     while let Ok(msg) = receiver.recv() {
         match msg {
             BlockStateOperations::Report(msg) => {
                 //Just send a hardcoded simple chunk pillar
+                let mut block_ids = Vec::new();
+                fill_dummy_block_ids(&mut block_ids);
                 send_packet!(
                     messenger,
                     msg.conn_id,
@@ -35,7 +54,7 @@ pub fn start(receiver: Receiver<BlockStateOperations>, messenger: Sender<Messeng
                         data: ChunkSection {
                             bits_per_block: 14,
                             data_array_length: 896,
-                            block_ids: Vec::new(),
+                            block_ids,
                             block_light: Vec::new(),
                             sky_light: Vec::new(),
                         },

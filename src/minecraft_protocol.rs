@@ -4,7 +4,6 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Error, Read, Write};
 
 const PALETTE_SIZE: i64 = 14; // We don't define our own palette, so we just use the default all blocks palette which is 14 bits
-const DEFAULT_BLOCK: i64 = 3;
 
 pub trait MinecraftProtocolReader {
     fn read_unsigned_short(&mut self) -> u16;
@@ -72,17 +71,18 @@ pub fn read_var_int<S: Read>(stream: &mut S) -> Result<i32, Error> {
     Ok(result)
 }
 
-//Both of these methods are temporary- need to recreate them when we implement chunks in earnest
+//We now have a functional though messy implementation of writing any block
 pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
     stream.write_u_byte(v.bits_per_block);
     stream.write_var_int(v.data_array_length);
-    //This only works perfectly for 1,2,3 for reasons I have yet to decipher
-    let mut long = 0;
+    let mut long: i64 = 0;
     for i in 0..4096 {
-        long += DEFAULT_BLOCK << ((PALETTE_SIZE * i) % 64);
+        let block_to_place = v.block_ids[i as usize] as i64;
+        let offset = (PALETTE_SIZE * i) % 64;
+        long += block_to_place << offset;
         if ((i * PALETTE_SIZE) % 64) >= 64 - PALETTE_SIZE {
             stream.write_long(long);
-            long = 0;
+            long = block_to_place >> (64 - offset);
         }
     }
     for _ in 0..2048 {

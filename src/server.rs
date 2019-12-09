@@ -16,7 +16,10 @@ pub fn listen(
     inbound_packet_processor: Sender<PacketProcessorOperations>,
     messenger: Sender<MessengerOperations>,
 ) {
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", env::var("PORT").unwrap())).unwrap();
+    let connection_string = format!("127.0.0.1:{}", env::var("PORT").unwrap());
+    let listener = TcpListener::bind(connection_string.clone()).unwrap();
+
+    trace!("Listening on {:?}", connection_string);
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();

@@ -12,3 +12,5 @@ byteorder = "1"
 # get rid of it and go back to the old way of creating services
 paste = "0.1"
 uuid = { version = "0.8", features = ["v4"] }
+log = "0.4"
+simplelog = "0.7.4"

@@ -102,7 +102,7 @@ packet_boilerplate!(
             (primary_bit_mask, VarInt),
             (size, VarInt),
             (data, ChunkSection), //actually a chunk array, but can pretend its 1 for now
-            (biomes, IntArray),
+            (biomes, IntArray(256)),
             (number_of_block_entities, VarInt)
         ]
     ),

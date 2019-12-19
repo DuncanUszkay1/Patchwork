@@ -15,25 +15,25 @@ packet_boilerplate!(
         Handshake,
         0,
         [
-            (protocol_version, VarInt, Untranslated),
-            (server_address, String, Untranslated),
-            (server_port, UShort, Untranslated),
-            (next_state, VarInt, Untranslated)
+            (protocol_version, VarInt),
+            (server_address, String),
+            (server_port, UShort),
+            (next_state, VarInt)
         ]
     ),
     (1, StatusRequest, 0, []),
-    (1, Ping, 1, [(payload, Long, Untranslated)]),
-    (2, LoginStart, 0, [(username, String, Untranslated)]),
-    (3, KeepAlive, 0x21, [(id, Long, Untranslated)]),
+    (1, Ping, 1, [(payload, Long)]),
+    (2, LoginStart, 0, [(username, String)]),
+    (3, KeepAlive, 0x21, [(id, Long)]),
     (
         3,
         PlayerPosition,
         0x10,
         [
-            (x, Double, Untranslated),
-            (feet_y, Double, Untranslated),
-            (z, Double, Untranslated),
-            (on_ground, Boolean, Untranslated)
+            (x, Double),
+            (feet_y, Double),
+            (z, Double),
+            (on_ground, Boolean)
         ]
     ),
     (
@@ -41,12 +41,12 @@ packet_boilerplate!(
         PlayerPositionAndLook,
         0x11,
         [
-            (x, Double, Untranslated),
-            (feet_y, Double, Untranslated),
-            (z, Double, Untranslated),
-            (yaw, Float, Untranslated),
-            (pitch, Float, Untranslated),
-            (on_ground, Boolean, Untranslated)
+            (x, Double),
+            (feet_y, Double),
+            (z, Double),
+            (yaw, Float),
+            (pitch, Float),
+            (on_ground, Boolean)
         ]
     ),
     (
@@ -54,27 +54,27 @@ packet_boilerplate!(
         PlayerLook,
         0x12,
         [
-            (yaw, Float, Untranslated),
-            (pitch, Float, Untranslated),
-            (on_ground, Boolean, Untranslated)
+            (yaw, Float),
+            (pitch, Float),
+            (on_ground, Boolean)
         ]
     ),
     (6, ReportState, 0x1, []),
-    (99, Pong, 1, [(payload, Long, Untranslated)]),
-    (99, StatusResponse, 0, [(json_response, String, Untranslated)]),
-    (99, LoginSuccess, 2, [(uuid, String, Untranslated), (username, String, Untranslated)]),
+    (99, Pong, 1, [(payload, Long)]),
+    (99, StatusResponse, 0, [(json_response, String)]),
+    (99, LoginSuccess, 2, [(uuid, String), (username, String)]),
     (
         99,
         JoinGame,
         0x25,
         [
             (entity_id, Int, EntityId),
-            (gamemode, UByte, Untranslated),
-            (dimension, Int, Untranslated),
-            (difficulty, UByte, Untranslated),
-            (max_players, UByte, Untranslated),
-            (level_type, String, Untranslated),
-            (reduced_debug_info, Boolean, Untranslated)
+            (gamemode, UByte),
+            (dimension, Int),
+            (difficulty, UByte),
+            (max_players, UByte),
+            (level_type, String),
+            (reduced_debug_info, Boolean)
         ]
     ),
     (
@@ -82,13 +82,13 @@ packet_boilerplate!(
         ClientboundPlayerPositionAndLook,
         0x32,
         [
-            (x, Double, Untranslated),
-            (y, Double, Untranslated),
-            (z, Double, Untranslated),
-            (yaw, Float, Untranslated),
-            (pitch, Float, Untranslated),
-            (flags, Byte, Untranslated),
-            (teleport_id, VarInt, Untranslated)
+            (x, Double),
+            (y, Double),
+            (z, Double),
+            (yaw, Float),
+            (pitch, Float),
+            (flags, Byte),
+            (teleport_id, VarInt)
         ]
     ),
     (
@@ -97,13 +97,13 @@ packet_boilerplate!(
         0x22,
         [
             (chunk_x, Int, XChunk),
-            (chunk_z, Int, Untranslated),
-            (full_chunk, Boolean, Untranslated), //always true
-            (primary_bit_mask, VarInt, Untranslated),
-            (size, VarInt, Untranslated),
-            (data, ChunkSection, Untranslated), //actually a chunk array, but can pretend its 1 for now
-            (biomes, IntArray, Untranslated),
-            (number_of_block_entities, VarInt, Untranslated)
+            (chunk_z, Int),
+            (full_chunk, Boolean), //always true
+            (primary_bit_mask, VarInt),
+            (size, VarInt),
+            (data, ChunkSection), //actually a chunk array, but can pretend its 1 for now
+            (biomes, IntArray),
+            (number_of_block_entities, VarInt)
         ]
     ),
     (
@@ -111,14 +111,14 @@ packet_boilerplate!(
         PlayerInfo,
         0x30,
         [
-            (action, VarInt, Untranslated),
-            (number_of_players, VarInt, Untranslated),
-            (uuid, u128, Untranslated),
-            (name, String, Untranslated),
-            (number_of_properties, VarInt, Untranslated),
-            (gamemode, VarInt, Untranslated),
-            (ping, VarInt, Untranslated),
-            (has_display_name, Boolean, Untranslated)
+            (action, VarInt),
+            (number_of_players, VarInt),
+            (uuid, u128),
+            (name, String),
+            (number_of_properties, VarInt),
+            (gamemode, VarInt),
+            (ping, VarInt),
+            (has_display_name, Boolean)
         ]
     ),
     (
@@ -127,13 +127,13 @@ packet_boilerplate!(
         0x05,
         [
             (entity_id, VarInt, EntityId),
-            (uuid, u128, Untranslated),
+            (uuid, u128),
             (x, Double, XEntity),
-            (y, Double, Untranslated),
-            (z, Double, Untranslated),
-            (yaw, UByte, Untranslated), // represents angle * (360/256). Might want to eventually make this its own type
-            (pitch, UByte, Untranslated), // for now lets just set it to 0
-            (entity_metadata_terminator, UByte, Untranslated)  // always 0xff until we implement entity metadata
+            (y, Double),
+            (z, Double),
+            (yaw, UByte), // represents angle * (360/256). Might want to eventually make this its own type
+            (pitch, UByte), // for now lets just set it to 0
+            (entity_metadata_terminator, UByte)  // always 0xff until we implement entity metadata
         ]
     ),
     (
@@ -142,12 +142,12 @@ packet_boilerplate!(
         0x29,
         [
             (entity_id, VarInt, EntityId),
-            (delta_x, Short, Untranslated),
-            (delta_y, Short, Untranslated),
-            (delta_z, Short, Untranslated),
-            (yaw, UByte, Untranslated),
-            (pitch, UByte, Untranslated),
-            (on_ground, Boolean, Untranslated)
+            (delta_x, Short),
+            (delta_y, Short),
+            (delta_z, Short),
+            (yaw, UByte),
+            (pitch, UByte),
+            (on_ground, Boolean)
         ]
     )
 );

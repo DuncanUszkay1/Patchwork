@@ -1,7 +1,5 @@
 macro_rules! packet_boilerplate {
-    ( $( ( $state:pat, $name:ident, $id:expr, [
-     $( ($fieldname:ident, $datatype:ident, $transtype:ident)),*
-    ])),*) => (
+    ( $( ( $state:pat, $name:ident, $id:expr, [$( ( $($fieldinfo:tt),* ) ),*])),*) => (
         //Create an enum with a struct variant for each packet we've defined
         //and a special variant for a packet we haven't defined
         #[derive(Debug, Clone)]
@@ -71,12 +69,12 @@ macro_rules! packet_boilerplate {
         }
 
         //Define the packet struct
-        $(packet!{$name, $id, [ $( ($fieldname, $datatype, $transtype)),*]})*
+        $(packet!{$name, $id, [ $( ( $( $fieldinfo ),* ) ),*]})*
     )
 }
 
 macro_rules! packet {
-    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident, $transtype:ident)),+]) => (
+    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident $(, $optional:tt),* )),+]) => (
         #[derive(Debug, Clone)]
         pub struct $name { $(pub $fieldname: mc_to_rust_datatype!($datatype)),* }
         impl $name {
@@ -89,7 +87,11 @@ macro_rules! packet {
             }
             pub fn translate(&self, translation_data: TranslationInfo) -> $name {
                 let mut translated = self.clone();
-                $(translated.$fieldname = translate_packet_field!(self.$fieldname.clone(), translation_data, $transtype); )*
+                $(translated.$fieldname = translate_packet_field!(
+                        self.$fieldname.clone(),
+                        translation_data
+                        $(, $optional ),*
+                ); )*
                 translated
             }
         }
@@ -249,7 +251,7 @@ macro_rules! write_packet_field {
 }
 
 macro_rules! translate_packet_field {
-    ($value:expr, $transdata:expr, Untranslated) => {
+    ($value:expr, $transdata:expr) => {
         $value
     };
     ($value:expr, $transdata:expr, EntityId) => {

@@ -1,5 +1,7 @@
 macro_rules! packet_boilerplate {
-    ( $( ( $state:pat, $name:ident, $id:expr, [$( ( $($fieldinfo:tt),* ) ),*])),*) => (
+    ( $( ( $state:pat, $name:ident, $id:expr,
+           [$(($fieldname:ident, $datatype:ident$(($typearg:tt))* $(, $transtype:tt),* ) ),*]
+    )),*) => (
         //Create an enum with a struct variant for each packet we've defined
         //and a special variant for a packet we haven't defined
         #[derive(Debug, Clone)]
@@ -69,28 +71,28 @@ macro_rules! packet_boilerplate {
         }
 
         //Define the packet struct
-        $(packet!{$name, $id, [ $( ( $( $fieldinfo ),* ) ),*]})*
+        $(packet!{$name, $id, [ $( ( $fieldname, $datatype$(($typearg))* $(, $transtype),* ) ),* ]})*
     )
 }
 
 macro_rules! packet {
-    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident $(, $optional:tt),* )),+]) => (
+    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident$(($typearg:tt))* $(, $transtype:tt),* )),+]) => (
         #[derive(Debug, Clone)]
         pub struct $name { $(pub $fieldname: mc_to_rust_datatype!($datatype)),* }
         impl $name {
             const ID: i32 = $id;
             pub fn new<S: MinecraftProtocolReader>(stream: &mut S) -> $name {
-                $name { $( $fieldname: read_packet_field!(stream, $datatype) ),* }
+                $name { $( $fieldname: read_packet_field!(stream, $datatype$(($typearg))*) ),* }
             }
             pub fn write_fields<S: MinecraftProtocolWriter>(&self, stream: &mut S) {
-                $( write_packet_field!(stream, self.$fieldname.clone(), $datatype) );*
+                $( write_packet_field!(stream, self.$fieldname.clone(), $datatype$(($typearg))*) );*
             }
             pub fn translate(&self, translation_data: TranslationInfo) -> $name {
                 let mut translated = self.clone();
                 $(translated.$fieldname = translate_packet_field!(
                         self.$fieldname.clone(),
                         translation_data
-                        $(, $optional ),*
+                        $(, $transtype ),*
                 ); )*
                 translated
             }
@@ -182,8 +184,8 @@ macro_rules! read_packet_field {
     ($stream:ident, Int) => {
         $stream.read_int()
     };
-    ($stream:ident, IntArray) => {
-        $stream.read_int_array()
+    ($stream:ident, IntArray($length:expr)) => {
+        $stream.read_int_array($length)
     };
     ($stream:ident, Float) => {
         $stream.read_float()
@@ -227,7 +229,7 @@ macro_rules! write_packet_field {
     ($stream:ident, $value:expr, Int) => {
         $stream.write_int($value)
     };
-    ($stream:ident, $value:expr, IntArray) => {
+    ($stream:ident, $value:expr, IntArray($length:expr)) => {
         $stream.write_int_array($value)
     };
     ($stream:ident, $value:expr, Float) => {

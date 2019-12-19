@@ -13,7 +13,7 @@ pub trait MinecraftProtocolReader {
     fn read_string(&mut self) -> String;
     fn read_u_128(&mut self) -> u128;
     fn read_int(&mut self) -> i32;
-    fn read_int_array(&mut self) -> Vec<i32>;
+    fn read_int_array(&mut self, length: u32) -> Vec<i32>;
     fn read_chunk_section(&mut self) -> ChunkSection;
     fn read_float(&mut self) -> f32;
     fn read_double(&mut self) -> f64;
@@ -167,10 +167,9 @@ impl<T: Read> MinecraftProtocolReader for T {
         self.read_i32::<BigEndian>().unwrap()
     }
 
-    fn read_int_array(&mut self) -> Vec<i32> {
-        // only supports arrays with 256 entires (to support biome array)
+    fn read_int_array(&mut self, length: u32) -> Vec<i32> {
         let mut v = Vec::<i32>::new();
-        for _ in 0..256 {
+        for _ in 0..length {
             v.push(self.read_i32::<BigEndian>().unwrap());
         }
         v

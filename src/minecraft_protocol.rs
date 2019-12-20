@@ -1,8 +1,8 @@
 extern crate byteorder;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{Error, Read, Write};
 use std::cmp::{max, min};
+use std::io::{Error, Read, Write};
 
 const PALETTE_SIZE: i64 = 14; // We don't define our own palette, so we just use the default all blocks palette which is 14 bits
 
@@ -100,9 +100,13 @@ pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
 
 pub fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
     let bits_per_block = stream.read_u_byte();
-    if bits_per_block != PALETTE_SIZE as u8 { panic!("Cannot read palettes"); }
+    if bits_per_block != PALETTE_SIZE as u8 {
+        panic!("Cannot read palettes");
+    }
     let data_array_length = stream.read_var_int();
-    if data_array_length != 896 { panic!("Got unexpected data array length"); }
+    if data_array_length != 896 {
+        panic!("Got unexpected data array length");
+    }
     let mut block_ids = Vec::<i32>::new();
     let mut long = stream.read_u64::<BigEndian>().unwrap();
     let mut index = 0;

@@ -21,12 +21,24 @@ pub struct ReportMessage {
 fn fill_dummy_block_ids(ids: &mut Vec<i32>) {
     //just some random pattern
     while ids.len() < 4096 {
-        match ids.len() % 2 {
+        match ids.len() % 6 {
             0 => {
                 ids.push(5);
             }
             1 => {
                 ids.push(3);
+            }
+            2 => {
+                ids.push(1);
+            }
+            3 => {
+                ids.push(1);
+            }
+            4 => {
+                ids.push(1);
+            }
+            5 => {
+                ids.push(1);
             }
             _ => {
                 panic!("if this happens, all hope is lost");

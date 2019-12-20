@@ -138,6 +138,15 @@ packet_boilerplate!(
     ),
     (
         _,
+        EntityHeadLook,
+        0x39,
+        [
+            (entity_id, VarInt, EntityId),
+            (angle, UByte)
+        ]
+    ),
+    (
+        _,
         EntityLookAndMove,
         0x29,
         [

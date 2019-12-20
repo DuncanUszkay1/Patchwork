@@ -1,7 +1,8 @@
 use super::super::minecraft_protocol::float_to_angle;
 use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
 use super::packet::{
-    ClientboundPlayerPositionAndLook, EntityLookAndMove, JoinGame, Packet, PlayerInfo, SpawnPlayer,
+    ClientboundPlayerPositionAndLook, EntityHeadLook, EntityLookAndMove, JoinGame, Packet,
+    PlayerInfo, SpawnPlayer,
 };
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -97,6 +98,13 @@ fn handle_message(
                     Some(player.conn_id),
                     true
                 )
+                .unwrap();
+                broadcast_packet!(
+                    messenger,
+                    Packet::EntityHeadLook(player.entity_head_look()),
+                    Some(player.conn_id),
+                    true
+                )
                 .unwrap()
             });
         }
@@ -156,6 +164,13 @@ impl Player {
             pitch: 0.0,
             flags: 0,
             teleport_id: 0,
+        }
+    }
+
+    fn entity_head_look(&self) -> EntityHeadLook {
+        EntityHeadLook {
+            entity_id: self.entity_id,
+            angle: float_to_angle(self.angle.yaw),
         }
     }
 

@@ -6,7 +6,7 @@ Issue: <!---Link the GH issue this relates to here. If you don't have an issue d
 ### What <!---Summary of whats in the PR-->
 
 ### Checks
--[ ] I have performed the [manual integration test](https://github.com/DuncanUszkay1/Patchwork/wiki/Manual-Integration-Testing)
--[ ] The output of cargo clippy is empty
--[ ] I have run cargo fmt on my most recent changes
--[x] I haven't read the PR template
+- [ ] I have performed the [manual integration test](https://github.com/DuncanUszkay1/Patchwork/wiki/Manual-Integration-Testing)
+- [ ] The output of cargo clippy is empty
+- [ ] I have run cargo fmt on my most recent changes
+- [x] I haven't read the PR template

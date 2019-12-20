@@ -102,7 +102,7 @@ packet_boilerplate!(
             (primary_bit_mask, VarInt),
             (size, VarInt),
             (data, ChunkSection), //actually a chunk array, but can pretend its 1 for now
-            (biomes, IntArray(256)),
+            (biomes, Array(Int, 256)),
             (number_of_block_entities, VarInt)
         ]
     ),
@@ -132,7 +132,7 @@ packet_boilerplate!(
             (y, Double),
             (z, Double),
             (yaw, UByte), // represents angle * (360/256). Might want to eventually make this its own type
-            (pitch, UByte), // for now lets just set it to 0
+            (pitch, UByte),
             (entity_metadata_terminator, UByte)  // always 0xff until we implement entity metadata
         ]
     ),

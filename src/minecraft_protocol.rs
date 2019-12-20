@@ -2,6 +2,7 @@ extern crate byteorder;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Error, Read, Write};
+use std::cmp::{max, min};
 
 const PALETTE_SIZE: i64 = 14; // We don't define our own palette, so we just use the default all blocks palette which is 14 bits
 
@@ -98,11 +99,30 @@ pub fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
 }
 
 pub fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
-    stream.read_u_byte();
-    stream.read_var_int();
-    for _ in 0..896 {
-        stream.read_long(); //read all air blocks
+    let bits_per_block = stream.read_u_byte();
+    if bits_per_block != PALETTE_SIZE as u8 { panic!("Cannot read palettes"); }
+    let data_array_length = stream.read_var_int();
+    if data_array_length != 896 { panic!("Got unexpected data array length"); }
+    let mut block_ids = Vec::<i32>::new();
+    let mut long = stream.read_u64::<BigEndian>().unwrap();
+    let mut index = 0;
+    for i in 0..4096 {
+        let bits_to_read = min(64 - (index % 64), 14);
+        let left_shift = max(64 - (bits_to_read + (index % 64)), 0);
+        let right_shift = left_shift + (index % 64);
+        let mut block_id = (long << left_shift) >> right_shift;
+        if left_shift == 0 && i != 4095 {
+            long = stream.read_u64::<BigEndian>().unwrap();
+        }
+        if bits_to_read < 14 {
+            let remainder_to_read = 14 - bits_to_read;
+            let remainder = long << (64 - remainder_to_read) >> (64 - remainder_to_read);
+            block_id += remainder >> remainder_to_read;
+        };
+        block_ids.push(block_id as i32);
+        index += 14;
     }
+    //Still ignoring these values for now
     for _ in 0..2048 {
         stream.read_u8().unwrap();
     }
@@ -110,9 +130,9 @@ pub fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
         stream.read_u8().unwrap();
     }
     ChunkSection {
-        bits_per_block: 14,
-        data_array_length: 896,
-        block_ids: Vec::<i32>::new(),
+        bits_per_block,
+        data_array_length,
+        block_ids,
         block_light: Vec::<u64>::new(),
         sky_light: Vec::<u64>::new(),
     }

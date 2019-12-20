@@ -1,6 +1,6 @@
 macro_rules! packet_boilerplate {
     ( $( ( $state:pat, $name:ident, $id:expr,
-           [$(($fieldname:ident, $datatype:ident$(($typearg:tt))* $(, $transtype:tt),* ) ),*]
+           [$(($fieldname:ident, $datatype:ident$(($($typearg:tt),*))* $(, $transtype:tt),* ) ),*]
     )),*) => (
         //Create an enum with a struct variant for each packet we've defined
         //and a special variant for a packet we haven't defined
@@ -71,21 +71,21 @@ macro_rules! packet_boilerplate {
         }
 
         //Define the packet struct
-        $(packet!{$name, $id, [ $( ( $fieldname, $datatype$(($typearg))* $(, $transtype),* ) ),* ]})*
+        $(packet!{$name, $id, [ $( ( $fieldname, $datatype$(($($typearg),*))* $(, $transtype),* ) ),* ]})*
     )
 }
 
 macro_rules! packet {
-    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident$(($typearg:tt))* $(, $transtype:tt),* )),+]) => (
+    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident$(($($typearg:tt),*))* $(, $transtype:tt),* )),+]) => (
         #[derive(Debug, Clone)]
-        pub struct $name { $(pub $fieldname: mc_to_rust_datatype!($datatype)),* }
+        pub struct $name { $(pub $fieldname: mc_to_rust_datatype!($datatype$(($($typearg),*))*)),* }
         impl $name {
             const ID: i32 = $id;
             pub fn new<S: MinecraftProtocolReader>(stream: &mut S) -> $name {
-                $name { $( $fieldname: read_packet_field!(stream, $datatype$(($typearg))*) ),* }
+                $name { $( $fieldname: read_packet_field!(stream, $datatype$(($($typearg),*))*) ),* }
             }
             pub fn write_fields<S: MinecraftProtocolWriter>(&self, stream: &mut S) {
-                $( write_packet_field!(stream, self.$fieldname.clone(), $datatype$(($typearg))*) );*
+                $( write_packet_field!(stream, self.$fieldname.clone(), $datatype$(($($typearg),*))*) );*
             }
             pub fn translate(&self, translation_data: TranslationInfo) -> $name {
                 let mut translated = self.clone();
@@ -139,8 +139,8 @@ macro_rules! mc_to_rust_datatype {
     (Int) => {
         i32
     };
-    (IntArray) => {
-        Vec::<i32>
+    (Array($type:ident, $length:expr)) => {
+        Vec::<mc_to_rust_datatype!($type)>
     };
     (Float) => {
         f32
@@ -184,7 +184,7 @@ macro_rules! read_packet_field {
     ($stream:ident, Int) => {
         $stream.read_int()
     };
-    ($stream:ident, IntArray($length:expr)) => {
+    ($stream:ident, Array($type:ident, $length:expr)) => {
         $stream.read_int_array($length)
     };
     ($stream:ident, Float) => {
@@ -229,7 +229,7 @@ macro_rules! write_packet_field {
     ($stream:ident, $value:expr, Int) => {
         $stream.write_int($value)
     };
-    ($stream:ident, $value:expr, IntArray($length:expr)) => {
+    ($stream:ident, $value:expr, Array($type:ident, $length:expr)) => {
         $stream.write_int_array($value)
     };
     ($stream:ident, $value:expr, Float) => {

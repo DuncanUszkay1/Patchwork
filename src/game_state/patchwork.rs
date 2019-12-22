@@ -6,6 +6,7 @@ use super::packet_processor::PacketProcessorOperations;
 use super::player::PlayerStateOperations;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub const ENTITY_ID_BLOCK_SIZE: i32 = 1000;
@@ -28,11 +29,6 @@ pub struct RouteMessage {
     pub conn_id: Uuid,
 }
 
-#[derive(Debug, Clone)]
-struct Patchwork {
-    pub maps: Vec<Map>,
-}
-
 pub fn start(
     receiver: Receiver<PatchworkStateOperations>,
     messenger: Sender<MessengerOperations>,
@@ -49,9 +45,15 @@ pub fn start(
                 inbound_packet_processor.clone(),
             ),
             PatchworkStateOperations::RoutePlayerPacket(msg) => {
+                let patchwork_clone = patchwork.clone();
+                let map_index = patchwork.player_map_indexes.entry(msg.conn_id);
                 if let Some(position) = extract_map_position(msg.clone().packet) {
-                    let map_index = patchwork.clone().position_map_index(position);
-                    println!("player on map {:?}", map_index);
+                    let new_map_index = patchwork_clone.position_map_index(position);
+                    let map_index = map_index.or_insert(new_map_index);
+                    if new_map_index != *map_index {
+                        println!("border crossing! from {:?} to {:?}", new_map_index, map_index);
+                        *map_index = new_map_index;
+                    }
                 }
                 gameplay_router::route_packet(msg.packet, msg.conn_id, player_state.clone());
             }
@@ -62,7 +64,7 @@ pub fn start(
     }
 }
 
-pub fn extract_map_position(packet: Packet) -> Option<Position> {
+fn extract_map_position(packet: Packet) -> Option<Position> {
     match packet {
         Packet::PlayerPosition(packet) => Some(Position {
             x: (packet.x / 16.0) as i32,
@@ -76,9 +78,16 @@ pub fn extract_map_position(packet: Packet) -> Option<Position> {
     }
 }
 
+#[derive(Debug, Clone)]
+struct Patchwork {
+    pub maps: Vec<Map>,
+    pub player_map_indexes: HashMap::<Uuid, usize>
+}
+
+
 impl Patchwork {
     pub fn new() -> Patchwork {
-        let mut patchwork = Patchwork { maps: Vec::new() };
+        let mut patchwork = Patchwork { maps: Vec::new(), player_map_indexes: HashMap::new() };
         patchwork.create_local_map();
         patchwork
     }

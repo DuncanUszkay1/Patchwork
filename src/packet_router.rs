@@ -1,5 +1,5 @@
 use super::game_state::block::BlockStateOperations;
-use super::game_state::patchwork::PatchworkStateOperations;
+use super::game_state::patchwork::{PatchworkStateOperations, RouteMessage};
 use super::game_state::player::PlayerStateOperations;
 use super::gameplay_router;
 use super::initiation_protocols::{
@@ -40,7 +40,12 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::Play => {
-            //patchwork_state.send(PatchworkStateOperations::RoutePlayerPacket(RouteMessage { packet: packet.clone(), conn_id })).unwrap();
+            patchwork_state
+                .send(PatchworkStateOperations::RoutePlayerPacket(RouteMessage {
+                    packet: packet.clone(),
+                    conn_id,
+                }))
+                .unwrap();
             gameplay_router::route_packet(packet, conn_id, player_state);
             TranslationUpdates::NoChange
         }

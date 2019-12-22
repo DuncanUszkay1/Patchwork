@@ -56,7 +56,7 @@ fn main() {
         (
             module: game_state::patchwork::start,
             name: patchwork_state,
-            dependencies: [messenger, inbound_packet_processor]
+            dependencies: [messenger, inbound_packet_processor, player_state]
         ),
         (
             module: messenger::start,

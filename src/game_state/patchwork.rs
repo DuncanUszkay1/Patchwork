@@ -1,20 +1,29 @@
 use super::map::{LocalMap, Map, Peer, Position, RemoteMap};
 use super::messenger::MessengerOperations;
+use super::packet::Packet;
 use super::packet_processor::PacketProcessorOperations;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
+use uuid::Uuid;
 
 pub const ENTITY_ID_BLOCK_SIZE: i32 = 1000;
 pub const CHUNK_SIZE: i32 = 16;
 
 pub enum PatchworkStateOperations {
     New(NewMapMessage),
+    RoutePlayerPacket(RouteMessage),
     Report,
 }
 
 #[derive(Debug)]
 pub struct NewMapMessage {
     pub peer: Peer,
+}
+
+#[derive(Debug)]
+pub struct RouteMessage {
+    pub packet: Packet,
+    pub conn_id: Uuid,
 }
 
 #[derive(Debug, Clone)]
@@ -36,10 +45,30 @@ pub fn start(
                 messenger.clone(),
                 inbound_packet_processor.clone(),
             ),
+            PatchworkStateOperations::RoutePlayerPacket(msg) => {
+                if let Some(position) = extract_map_position(msg.packet) {
+                    let map_index = patchwork.clone().position_map_index(position);
+                    println!("player on map {:?}", map_index);
+                }
+            }
             PatchworkStateOperations::Report => {
                 patchwork.clone().report(messenger.clone());
             }
         }
+    }
+}
+
+pub fn extract_map_position(packet: Packet) -> Option<Position> {
+    match packet {
+        Packet::PlayerPosition(packet) => Some(Position {
+            x: (packet.x / 16.0) as i32,
+            z: (packet.z / 16.0) as i32,
+        }),
+        Packet::PlayerPositionAndLook(packet) => Some(Position {
+            x: (packet.x / 16.0) as i32,
+            z: (packet.z / 16.0) as i32,
+        }),
+        _ => None,
     }
 }
 
@@ -55,6 +84,13 @@ impl Patchwork {
             position: self.next_position(),
             entity_id_block: self.next_entity_id_block(),
         }));
+    }
+
+    pub fn position_map_index(self, position: Position) -> usize {
+        self.maps
+            .into_iter()
+            .position(|map| map.position() == position)
+            .unwrap()
     }
 
     pub fn add_peer_map(

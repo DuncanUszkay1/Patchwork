@@ -35,7 +35,7 @@ pub struct LocalMap {
     // pub block_state_sender
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Position {
     pub x: i32,
     pub z: i32,
@@ -58,6 +58,13 @@ impl Map {
                 .unwrap();
             }
             Map::Local(_map) => {}
+        }
+    }
+
+    pub fn position(self) -> Position {
+        match self {
+            Map::Remote(map) => map.position,
+            Map::Local(map) => map.position,
         }
     }
 }

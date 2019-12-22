@@ -40,6 +40,7 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::Play => {
+            //patchwork_state.send(PatchworkStateOperations::RoutePlayerPacket(RouteMessage { packet: packet.clone(), conn_id })).unwrap();
             gameplay_router::route_packet(packet, conn_id, player_state);
             TranslationUpdates::NoChange
         }

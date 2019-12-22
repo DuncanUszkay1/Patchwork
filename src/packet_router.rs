@@ -1,7 +1,6 @@
 use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::{PatchworkStateOperations, RouteMessage};
 use super::game_state::player::PlayerStateOperations;
-use super::gameplay_router;
 use super::initiation_protocols::{
     border_cross_login, client_ping, handshake, in_peer_sub, login, out_peer_sub,
 };
@@ -46,7 +45,6 @@ pub fn route_packet(
                     conn_id,
                 }))
                 .unwrap();
-            gameplay_router::route_packet(packet, conn_id, player_state);
             TranslationUpdates::NoChange
         }
         Status::BorderCrossLogin => {

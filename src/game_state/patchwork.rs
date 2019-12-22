@@ -1,7 +1,9 @@
+use super::gameplay_router;
 use super::map::{LocalMap, Map, Peer, Position, RemoteMap};
 use super::messenger::MessengerOperations;
 use super::packet::Packet;
 use super::packet_processor::PacketProcessorOperations;
+use super::player::PlayerStateOperations;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -20,7 +22,7 @@ pub struct NewMapMessage {
     pub peer: Peer,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RouteMessage {
     pub packet: Packet,
     pub conn_id: Uuid,
@@ -35,6 +37,7 @@ pub fn start(
     receiver: Receiver<PatchworkStateOperations>,
     messenger: Sender<MessengerOperations>,
     inbound_packet_processor: Sender<PacketProcessorOperations>,
+    player_state: Sender<PlayerStateOperations>,
 ) {
     let mut patchwork = Patchwork::new();
 
@@ -46,10 +49,11 @@ pub fn start(
                 inbound_packet_processor.clone(),
             ),
             PatchworkStateOperations::RoutePlayerPacket(msg) => {
-                if let Some(position) = extract_map_position(msg.packet) {
+                if let Some(position) = extract_map_position(msg.clone().packet) {
                     let map_index = patchwork.clone().position_map_index(position);
                     println!("player on map {:?}", map_index);
                 }
+                gameplay_router::route_packet(msg.packet, msg.conn_id, player_state.clone());
             }
             PatchworkStateOperations::Report => {
                 patchwork.clone().report(messenger.clone());

@@ -23,6 +23,7 @@ pub struct Peer {
 
 #[derive(Debug, Clone)]
 pub struct RemoteMap {
+    pub peer: Peer,
     pub position: Position,
     pub entity_id_block: i32,
     pub conn_id: Uuid,
@@ -109,6 +110,7 @@ impl RemoteMap {
             );
         });
         let map = RemoteMap {
+            peer,
             position,
             entity_id_block,
             conn_id,
@@ -118,8 +120,8 @@ impl RemoteMap {
             conn_id,
             Packet::Handshake(Handshake {
                 protocol_version: 404,
-                server_address: peer.address.clone(),
-                server_port: peer.port,
+                server_address: String::from(""),
+                server_port: 0,
                 next_state: 6,
             })
         )
@@ -134,8 +136,8 @@ impl RemoteMap {
             conn_id,
             Packet::Handshake(Handshake {
                 protocol_version: 404,
-                server_address: peer.address.clone(),
-                server_port: peer.port,
+                server_address: String::from(""),
+                server_port: 0,
                 next_state: 6,
             })
         )

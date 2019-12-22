@@ -8,13 +8,15 @@ mod game_state;
 mod gameplay_router;
 mod initiation_protocols;
 mod keep_alive;
+mod map;
 mod minecraft_protocol;
 mod packet;
 mod packet_processor;
 mod packet_router;
 mod server;
 
-use game_state::patchwork::{NewMapMessage, PatchworkStateOperations, Peer};
+use game_state::patchwork::{NewMapMessage, PatchworkStateOperations};
+use map::Peer;
 use service::ServiceInstance;
 
 use std::env;

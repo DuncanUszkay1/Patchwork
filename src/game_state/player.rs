@@ -86,6 +86,20 @@ fn handle_message(
                 Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_packet())
             )
             .unwrap();
+            broadcast_packet!(
+                messenger,
+                Packet::PlayerInfo(player.player_info_packet()),
+                Some(msg.conn_id),
+                true
+            )
+            .unwrap();
+            broadcast_packet!(
+                messenger,
+                Packet::SpawnPlayer(player.spawn_player_packet()),
+                Some(msg.conn_id),
+                true
+            )
+            .unwrap();
             players.insert(msg.conn_id, player);
         }
         PlayerStateOperations::MoveAndLook(msg) => {

@@ -1,18 +1,17 @@
 use super::messenger::{MessengerOperations, NewConnectionMessage, SendPacketMessage};
 use super::packet::{Handshake, Packet};
-use super::packet_processor::{
-    PacketProcessorOperations, TranslationDataMessage, TranslationUpdates,
-};
+use super::packet_processor::{PacketProcessorOperations, TranslationDataMessage};
 use super::server;
+use super::translation::TranslationUpdates;
 use std::io;
 use std::sync::mpsc::Sender;
 use std::thread;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
-pub enum Map {
-    Local(LocalMap),
-    Remote(RemoteMap),
+pub struct PeerConnection {
+    pub peer: Peer,
+    pub conn_id: Uuid,
 }
 
 #[derive(Debug, Clone)]
@@ -22,21 +21,13 @@ pub struct Peer {
 }
 
 #[derive(Debug, Clone)]
-pub struct RemoteMap {
-    pub peer: Peer,
+pub struct Map {
     pub position: Position,
     pub entity_id_block: i32,
-    pub conn_id: Uuid,
+    pub peer_connection: Option<PeerConnection>,
 }
 
-#[derive(Debug, Clone)]
-pub struct LocalMap {
-    pub position: Position,
-    pub entity_id_block: i32,
-    // pub block_state_sender
-}
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Position {
     pub x: i32,
     pub z: i32,
@@ -44,40 +35,35 @@ pub struct Position {
 
 impl Map {
     pub fn report(&self, messenger: Sender<MessengerOperations>) {
-        match self {
-            Map::Remote(map) => {
-                send_packet!(
-                    messenger,
-                    map.conn_id,
-                    Packet::Handshake(Handshake {
-                        protocol_version: 404,
-                        server_address: String::from(""), //Neither of these fields are actually used
-                        server_port: 0,
-                        next_state: 5,
-                    })
-                )
-                .unwrap();
-            }
-            Map::Local(_map) => {}
+        if let Some(peer_connection) = &self.peer_connection {
+            send_packet!(
+                messenger,
+                peer_connection.conn_id,
+                Packet::Handshake(Handshake {
+                    protocol_version: 404,
+                    server_address: String::from(""), //Neither of these fields are actually used
+                    server_port: 0,
+                    next_state: 5,
+                })
+            )
+            .unwrap();
         }
     }
 
-    pub fn position(self) -> Position {
-        match self {
-            Map::Remote(map) => map.position,
-            Map::Local(map) => map.position,
+    pub fn new(position: Position, entity_id_block: i32) -> Map {
+        Map {
+            position,
+            entity_id_block,
+            peer_connection: None,
         }
     }
-}
 
-impl RemoteMap {
-    pub fn try_new(
+    pub fn connect(
+        &self,
         messenger: Sender<MessengerOperations>,
         inbound_packet_processor: Sender<PacketProcessorOperations>,
         peer: Peer,
-        position: Position,
-        entity_id_block: i32,
-    ) -> Result<RemoteMap, io::Error> {
+    ) -> Result<Map, io::Error> {
         let conn_id = Uuid::new_v4();
         let stream = server::new_connection(peer.address.clone(), peer.port)?;
         messenger
@@ -92,8 +78,8 @@ impl RemoteMap {
                     conn_id,
                     updates: vec![
                         TranslationUpdates::State(5),
-                        TranslationUpdates::EntityIdBlock(entity_id_block),
-                        TranslationUpdates::XOrigin(position.x),
+                        TranslationUpdates::EntityIdBlock(self.entity_id_block),
+                        TranslationUpdates::XOrigin(self.position.x),
                     ],
                 },
             ))
@@ -109,11 +95,10 @@ impl RemoteMap {
                 conn_id,
             );
         });
-        let map = RemoteMap {
-            peer,
-            position,
-            entity_id_block,
-            conn_id,
+        let map = Map {
+            peer_connection: Some(PeerConnection { peer, conn_id }),
+            position: self.position,
+            entity_id_block: self.entity_id_block,
         };
         send_packet!(
             messenger,

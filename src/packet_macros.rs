@@ -289,19 +289,19 @@ macro_rules! translate_incoming_packet_field {
         $value
     };
     ($value:expr, $transdata:expr, EntityId) => {
-        $value + ($transdata.entity_id_block * ENTITY_ID_BLOCK_SIZE)
+        $value + ($transdata.map.entity_id_block * ENTITY_ID_BLOCK_SIZE)
     };
     ($value:expr, $transdata:expr, XChunk) => {
-        $transdata.map.x_origin
+        $transdata.map.position.x
     };
     ($value:expr, $transdata:expr, XEntity) => {
-        $value + ($transdata.map.x_origin * CHUNK_SIZE) as f64
+        $value + ($transdata.map.position.x * CHUNK_SIZE) as f64
     };
 }
 
 macro_rules! translate_outgoing_packet_field {
     ($value:expr, $transdata:expr, XEntity) => {
-        $value - ($transdata.map.x_origin * CHUNK_SIZE) as f64
+        $value - ($transdata.map.position.x * CHUNK_SIZE) as f64
     };
     ($value:expr, $transdata:expr) => {
         $value

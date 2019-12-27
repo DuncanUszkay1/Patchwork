@@ -1,5 +1,6 @@
+use super::map::Map;
 use super::packet::{translate_outgoing, write, Packet};
-use super::packet_processor::{Map, TranslationInfo};
+use super::translation::TranslationInfo;
 use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
 use std::sync::mpsc::Receiver;
@@ -81,7 +82,9 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
                 if let Some(socket) = connection_map.get(&msg.conn_id) {
                     let mut socket_clone = socket.try_clone().unwrap();
                     let translated_packet = match translation_data.get(&msg.conn_id) {
-                        Some(translation_data) => translate_outgoing(msg.packet, *translation_data),
+                        Some(translation_data) => {
+                            translate_outgoing(msg.packet, translation_data.clone())
+                        }
                         None => msg.packet,
                     };
                     write(&mut socket_clone, translated_packet);
@@ -123,7 +126,6 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
                     msg.conn_id,
                     TranslationInfo {
                         state: 0,
-                        entity_id_block: 0,
                         map: msg.map,
                     },
                 );

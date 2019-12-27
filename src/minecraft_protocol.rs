@@ -15,6 +15,7 @@ pub trait MinecraftProtocolReader {
     fn read_u_128(&mut self) -> u128;
     fn read_int(&mut self) -> i32;
     fn read_int_array(&mut self, length: u32) -> Vec<i32>;
+    fn read_var_int_array(&mut self, length: u32) -> Vec<i32>;
     fn read_chunk_section(&mut self) -> ChunkSection;
     fn read_float(&mut self) -> f32;
     fn read_double(&mut self) -> f64;
@@ -32,6 +33,7 @@ pub trait MinecraftProtocolWriter {
     fn write_u_128(&mut self, v: u128);
     fn write_int(&mut self, v: i32);
     fn write_int_array(&mut self, v: Vec<i32>);
+    fn write_var_int_array(&mut self, v: Vec<i32>);
     fn write_chunk_section(&mut self, v: ChunkSection);
     fn write_float(&mut self, v: f32);
     fn write_double(&mut self, v: f64);
@@ -199,6 +201,14 @@ impl<T: Read> MinecraftProtocolReader for T {
         v
     }
 
+    fn read_var_int_array(&mut self, length: u32) -> Vec<i32> {
+        let mut v = Vec::<i32>::new();
+        for _ in 0..length {
+            v.push(self.read_var_int());
+        }
+        v
+    }
+
     fn read_float(&mut self) -> f32 {
         self.read_f32::<BigEndian>().unwrap()
     }
@@ -264,6 +274,10 @@ impl<T: Write> MinecraftProtocolWriter for T {
     fn write_int_array(&mut self, v: Vec<i32>) {
         v.iter()
             .for_each(|element| self.write_i32::<BigEndian>(*element).unwrap());
+    }
+
+    fn write_var_int_array(&mut self, v: Vec<i32>) {
+        v.iter().for_each(|element| self.write_var_int(*element));
     }
 
     fn write_chunk_section(&mut self, v: ChunkSection) {

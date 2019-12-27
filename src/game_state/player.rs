@@ -1,8 +1,8 @@
 use super::super::minecraft_protocol::float_to_angle;
 use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
 use super::packet::{
-    ClientboundPlayerPositionAndLook, EntityHeadLook, EntityLookAndMove, JoinGame, Packet,
-    PlayerInfo, SpawnPlayer,
+    ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook, EntityLookAndMove, JoinGame,
+    Packet, PlayerInfo, PlayerPositionAndLook, SpawnPlayer,
 };
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -14,6 +14,7 @@ pub enum PlayerStateOperations {
     New(NewPlayerMessage),
     Report(ReportMessage),
     MoveAndLook(PlayerMoveAndLookMessage),
+    CrossBorder(CrossBorderMessage),
 }
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,12 @@ pub struct NewPlayerMessage {
 #[derive(Debug)]
 pub struct ReportMessage {
     pub conn_id: Uuid,
+}
+
+#[derive(Debug)]
+pub struct CrossBorderMessage {
+    pub local_conn_id: Uuid,
+    pub remote_conn_id: Uuid,
 }
 
 #[derive(Debug)]
@@ -138,10 +145,45 @@ fn handle_message(
                 .unwrap();
             }
         }),
+        PlayerStateOperations::CrossBorder(msg) => {
+            let player = players
+                .get(&msg.local_conn_id)
+                .expect("Could not cross border: player not found");
+            broadcast_packet!(
+                messenger,
+                Packet::DestroyEntities(player.destroy_entities()),
+                Some(player.conn_id),
+                true
+            )
+            .unwrap();
+            send_packet!(
+                messenger,
+                msg.remote_conn_id,
+                Packet::PlayerPositionAndLook(player.player_position_and_look())
+            )
+            .unwrap();
+        }
     }
 }
 
 impl Player {
+    pub fn player_position_and_look(&self) -> PlayerPositionAndLook {
+        PlayerPositionAndLook {
+            x: self.position.x,
+            feet_y: self.position.y,
+            z: self.position.z,
+            yaw: self.angle.yaw,
+            pitch: self.angle.pitch,
+            on_ground: false,
+        }
+    }
+
+    pub fn destroy_entities(&self) -> DestroyEntities {
+        DestroyEntities {
+            entity_ids: vec![self.entity_id],
+        }
+    }
+
     pub fn move_and_look(
         &mut self,
         new_position: Option<Position>,

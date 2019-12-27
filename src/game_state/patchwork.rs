@@ -1,10 +1,13 @@
 use super::gameplay_router;
 use super::map::{LocalMap, Map, Peer, Position, RemoteMap};
-use super::messenger::{MessengerOperations, NewConnectionMessage, SendPacketMessage};
+use super::messenger::{
+    MessengerOperations, NewConnectionMessage, SendPacketMessage, UpdateTranslationMessage,
+};
 use super::packet;
 use super::packet::Packet;
+use super::packet_processor;
 use super::packet_processor::PacketProcessorOperations;
-use super::player::PlayerStateOperations;
+use super::player::{CrossBorderMessage, PlayerStateOperations};
 use super::server;
 use std::collections::HashMap;
 use std::io;
@@ -59,16 +62,17 @@ pub fn start(
                 if let Some(position) = extract_map_position(msg.clone().packet) {
                     let new_map_index = patchwork_clone.position_map_index(position);
                     if new_map_index != anchor.map_index {
-                        println!(
-                            "border crossing! from {:?} to {:?}",
-                            new_map_index, anchor.map_index
-                        );
                         *anchor = match &patchwork.maps[new_map_index] {
-                            Map::Remote(map) => {
-                                Anchor::connect(map.peer.clone(), new_map_index, messenger.clone())
-                                    .unwrap()
-                            }
-                            Map::Local(map) => Anchor {
+                            Map::Remote(map) => Anchor::connect(
+                                map.peer.clone(),
+                                msg.conn_id,
+                                new_map_index,
+                                map.position.x,
+                                messenger.clone(),
+                                player_state.clone(),
+                            )
+                            .unwrap(),
+                            Map::Local(_) => Anchor {
                                 conn_id: None,
                                 map_index: new_map_index,
                             },
@@ -77,7 +81,6 @@ pub fn start(
                 }
                 match &patchwork.maps[anchor.map_index] {
                     Map::Local(_) => {
-                        println!("handling locally");
                         gameplay_router::route_packet(
                             msg.packet,
                             msg.conn_id,
@@ -87,7 +90,6 @@ pub fn start(
                     Map::Remote(_) => match msg.packet {
                         Packet::Unknown => {}
                         _ => {
-                            println!("forwarding");
                             send_packet!(messenger, anchor.conn_id.unwrap(), msg.packet).unwrap();
                         }
                     },
@@ -123,10 +125,12 @@ struct Anchor {
 impl Anchor {
     pub fn connect(
         peer: Peer,
+        local_conn_id: Uuid,
         map_index: usize,
+        x_origin: i32,
         messenger: Sender<MessengerOperations>,
+        player_state: Sender<PlayerStateOperations>,
     ) -> Result<Anchor, io::Error> {
-        println!("would connect to peer {:?}", peer.clone());
         let conn_id = Uuid::new_v4();
         let stream = server::new_connection(peer.address.clone(), peer.port)?;
         messenger
@@ -134,6 +138,17 @@ impl Anchor {
                 conn_id,
                 socket: stream.try_clone().unwrap(),
             }))
+            .unwrap();
+        messenger
+            .send(MessengerOperations::UpdateTranslation(
+                UpdateTranslationMessage {
+                    conn_id,
+                    map: packet_processor::Map {
+                        x_origin,
+                        y_origin: 0,
+                    },
+                },
+            ))
             .unwrap();
         send_packet!(
             messenger,
@@ -146,17 +161,12 @@ impl Anchor {
             })
         )
         .unwrap();
-        send_packet!(
-            messenger,
-            conn_id,
-            Packet::Handshake(packet::Handshake {
-                protocol_version: 404,
-                server_address: String::from(""), //Neither of these fields are actually used
-                server_port: 0,
-                next_state: 4,
-            })
-        )
-        .unwrap();
+        player_state
+            .send(PlayerStateOperations::CrossBorder(CrossBorderMessage {
+                local_conn_id,
+                remote_conn_id: conn_id,
+            }))
+            .unwrap();
         Ok(Anchor {
             map_index,
             conn_id: Some(conn_id),
@@ -191,7 +201,7 @@ impl Patchwork {
         self.maps
             .into_iter()
             .position(|map| map.position() == position)
-            .unwrap()
+            .expect("Could not find map for position")
     }
 
     pub fn add_peer_map(

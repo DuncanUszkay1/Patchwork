@@ -24,24 +24,24 @@ packet_boilerplate!(
     (1, StatusRequest, 0, []),
     (1, Ping, 1, [(payload, Long)]),
     (2, LoginStart, 0, [(username, String)]),
-    (3, KeepAlive, 0x21, [(id, Long)]),
+    (_, KeepAlive, 0x21, [(id, Long)]),
     (
-        3,
+        _,
         PlayerPosition,
         0x10,
         [
-            (x, Double),
+            (x, Double, XEntity),
             (feet_y, Double),
             (z, Double),
             (on_ground, Boolean)
         ]
     ),
     (
-        3,
+        _,
         PlayerPositionAndLook,
         0x11,
         [
-            (x, Double),
+            (x, Double, XEntity),
             (feet_y, Double),
             (z, Double),
             (yaw, Float),
@@ -50,7 +50,7 @@ packet_boilerplate!(
         ]
     ),
     (
-        3,
+        _,
         PlayerLook,
         0x12,
         [
@@ -143,6 +143,14 @@ packet_boilerplate!(
         [
             (entity_id, VarInt, EntityId),
             (angle, UByte)
+        ]
+    ),
+    (
+        _,
+        DestroyEntities,
+        0x35,
+        [
+            (entity_ids, LengthPrefixedArray(VarInt))
         ]
     ),
     (

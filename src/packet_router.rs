@@ -48,8 +48,12 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::BorderCrossLogin => {
-            border_cross_login::init_border_cross_login(packet, conn_id, messenger, player_state);
-            TranslationUpdates::State(3)
+            if border_cross_login::init_border_cross_login(packet, conn_id, messenger, player_state)
+            {
+                TranslationUpdates::State(3)
+            } else {
+                TranslationUpdates::NoChange
+            }
         }
         Status::InPeerSub => {
             in_peer_sub::init_incoming_peer_sub(packet, conn_id, messenger);

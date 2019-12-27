@@ -70,6 +70,15 @@ macro_rules! packet_boilerplate {
             }
         }
 
+        pub fn translate_outgoing(packet: Packet, translation_info: TranslationInfo) -> Packet {
+            match packet {
+                $(Packet::$name(packet) => {
+                    Packet::$name(packet.translate_outgoing(translation_info))
+                })*
+                Packet::Unknown => { Packet::Unknown }
+            }
+        }
+
         //Define the packet struct
         $(packet!{$name, $id, [ $( ( $fieldname, $datatype$(($($typearg),*))* $(, $transtype),* ) ),* ]})*
     )
@@ -89,7 +98,16 @@ macro_rules! packet {
             }
             pub fn translate(&self, translation_data: TranslationInfo) -> $name {
                 let mut translated = self.clone();
-                $(translated.$fieldname = translate_packet_field!(
+                $(translated.$fieldname = translate_incoming_packet_field!(
+                        self.$fieldname.clone(),
+                        translation_data
+                        $(, $transtype ),*
+                ); )*
+                translated
+            }
+            pub fn translate_outgoing(&self, translation_data: TranslationInfo) -> $name {
+                let mut translated = self.clone();
+                $(translated.$fieldname = translate_outgoing_packet_field!(
                         self.$fieldname.clone(),
                         translation_data
                         $(, $transtype ),*
@@ -108,6 +126,9 @@ macro_rules! packet {
             }
             pub fn write_fields<S: MinecraftProtocolWriter>(&self, stream: &mut S) {}
             pub fn translate(&self, translation_data: TranslationInfo) -> $name {
+                self.clone()
+            }
+            pub fn translate_outgoing(&self, translation_data: TranslationInfo) -> $name {
                 self.clone()
             }
         }
@@ -140,6 +161,9 @@ macro_rules! mc_to_rust_datatype {
         i32
     };
     (Array($type:ident, $length:expr)) => {
+        Vec::<mc_to_rust_datatype!($type)>
+    };
+    (LengthPrefixedArray($type:ident)) => {
         Vec::<mc_to_rust_datatype!($type)>
     };
     (Float) => {
@@ -187,6 +211,10 @@ macro_rules! read_packet_field {
     ($stream:ident, Array($type:ident, $length:expr)) => {
         $stream.read_int_array($length)
     };
+    ($stream:ident, LengthPrefixedArray($type:ident)) => {{
+        let length = $stream.read_var_int();
+        $stream.read_int_array(length as u32)
+    }};
     ($stream:ident, Float) => {
         $stream.read_float()
     };
@@ -232,6 +260,10 @@ macro_rules! write_packet_field {
     ($stream:ident, $value:expr, Array($type:ident, $length:expr)) => {
         $stream.write_int_array($value)
     };
+    ($stream:ident, $value:expr, LengthPrefixedArray($type:ident)) => {{
+        $stream.write_var_int($value.len() as i32);
+        $stream.write_var_int_array($value)
+    }};
     ($stream:ident, $value:expr, Float) => {
         $stream.write_float($value)
     };
@@ -252,7 +284,7 @@ macro_rules! write_packet_field {
     };
 }
 
-macro_rules! translate_packet_field {
+macro_rules! translate_incoming_packet_field {
     ($value:expr, $transdata:expr) => {
         $value
     };
@@ -264,5 +296,20 @@ macro_rules! translate_packet_field {
     };
     ($value:expr, $transdata:expr, XEntity) => {
         $value + ($transdata.map.x_origin * CHUNK_SIZE) as f64
+    };
+}
+
+macro_rules! translate_outgoing_packet_field {
+    ($value:expr, $transdata:expr, XEntity) => {
+        $value - ($transdata.map.x_origin * CHUNK_SIZE) as f64
+    };
+    ($value:expr, $transdata:expr) => {
+        $value
+    };
+    ($value:expr, $transdata:expr, EntityId) => {
+        $value
+    };
+    ($value:expr, $transdata:expr, XChunk) => {
+        $value
     };
 }

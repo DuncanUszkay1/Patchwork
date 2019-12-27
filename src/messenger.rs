@@ -1,4 +1,5 @@
-use super::packet::{write, Packet};
+use super::packet::{translate_outgoing, write, Packet};
+use super::packet_processor::{Map, TranslationInfo};
 use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
 use std::sync::mpsc::Receiver;
@@ -28,12 +29,19 @@ pub enum MessengerOperations {
     Broadcast(BroadcastPacketMessage),
     Subscribe(SubscribeMessage),
     New(NewConnectionMessage),
+    UpdateTranslation(UpdateTranslationMessage),
 }
 
 #[derive(Debug)]
 pub struct SendPacketMessage {
     pub conn_id: Uuid,
     pub packet: Packet,
+}
+
+#[derive(Debug)]
+pub struct UpdateTranslationMessage {
+    pub conn_id: Uuid,
+    pub map: Map,
 }
 
 #[derive(Debug)]
@@ -65,13 +73,18 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();
     let mut local_only_broadcast_list = HashSet::<Uuid>::new();
     let mut all_broadcast_list = HashSet::<Uuid>::new();
+    let mut translation_data = HashMap::<Uuid, TranslationInfo>::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {
             MessengerOperations::Send(msg) => {
                 if let Some(socket) = connection_map.get(&msg.conn_id) {
                     let mut socket_clone = socket.try_clone().unwrap();
-                    write(&mut socket_clone, msg.packet);
+                    let translated_packet = match translation_data.get(&msg.conn_id) {
+                        Some(translation_data) => translate_outgoing(msg.packet, *translation_data),
+                        None => msg.packet,
+                    };
+                    write(&mut socket_clone, translated_packet);
                 }
             }
             MessengerOperations::Broadcast(msg) => {
@@ -104,6 +117,16 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
             },
             MessengerOperations::New(msg) => {
                 connection_map.insert(msg.conn_id, msg.socket);
+            }
+            MessengerOperations::UpdateTranslation(msg) => {
+                translation_data.insert(
+                    msg.conn_id,
+                    TranslationInfo {
+                        state: 0,
+                        entity_id_block: 0,
+                        map: msg.map,
+                    },
+                );
             }
         }
     }

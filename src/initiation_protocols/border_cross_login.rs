@@ -17,28 +17,34 @@ pub fn init_border_cross_login(
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
-) {
-    let player = Player {
-        conn_id,
-        uuid: Uuid::new_v4(),
-        name: String::from("ghost"),
-        entity_id: 0, // replaced by player state
-        position: Position {
-            x: 5.0,
-            y: 16.0,
-            z: 5.0,
-        },
-        angle: Angle {
-            pitch: 0.0,
-            yaw: 0.0,
-        },
-    };
+) -> bool {
+    match p {
+        Packet::PlayerPositionAndLook(packet) => {
+            let player = Player {
+                conn_id,
+                uuid: Uuid::new_v4(),
+                name: String::from("ghost"),
+                entity_id: 0, // replaced by player state
+                position: Position {
+                    x: packet.x,
+                    y: packet.feet_y,
+                    z: packet.z,
+                },
+                angle: Angle {
+                    pitch: packet.pitch,
+                    yaw: packet.yaw,
+                },
+            };
 
-    //update the gamestate with this new player
-    player_state
-        .send(PlayerStateOperations::New(NewPlayerMessage {
-            conn_id,
-            player,
-        }))
-        .unwrap();
+            //update the gamestate with this new player
+            player_state
+                .send(PlayerStateOperations::New(NewPlayerMessage {
+                    conn_id,
+                    player,
+                }))
+                .unwrap();
+            true
+        }
+        _ => false,
+    }
 }

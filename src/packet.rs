@@ -24,9 +24,9 @@ packet_boilerplate!(
     (1, StatusRequest, 0, []),
     (1, Ping, 1, [(payload, Long)]),
     (2, LoginStart, 0, [(username, String)]),
-    (_, KeepAlive, 0x21, [(id, Long)]),
+    (3, KeepAlive, 0x21, [(id, Long)]),
     (
-        _,
+        3,
         PlayerPosition,
         0x10,
         [
@@ -37,7 +37,7 @@ packet_boilerplate!(
         ]
     ),
     (
-        _,
+        _, //Temporary for border crossing, once it has its own packet change this back to 3
         PlayerPositionAndLook,
         0x11,
         [
@@ -50,7 +50,7 @@ packet_boilerplate!(
         ]
     ),
     (
-        _,
+        3,
         PlayerLook,
         0x12,
         [

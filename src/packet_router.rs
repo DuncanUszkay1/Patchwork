@@ -6,7 +6,7 @@ use super::initiation_protocols::{
 };
 use super::messenger::MessengerOperations;
 use super::packet::Packet;
-use super::packet_processor::TranslationUpdates;
+use super::translation::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 

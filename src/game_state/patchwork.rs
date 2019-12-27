@@ -1,11 +1,10 @@
 use super::gameplay_router;
-use super::map::{LocalMap, Map, Peer, Position, RemoteMap};
+use super::map::{Map, Peer, Position};
 use super::messenger::{
     MessengerOperations, NewConnectionMessage, SendPacketMessage, UpdateTranslationMessage,
 };
 use super::packet;
 use super::packet::Packet;
-use super::packet_processor;
 use super::packet_processor::PacketProcessorOperations;
 use super::player::{CrossBorderMessage, PlayerStateOperations};
 use super::server;
@@ -62,37 +61,37 @@ pub fn start(
                 if let Some(position) = extract_map_position(msg.clone().packet) {
                     let new_map_index = patchwork_clone.position_map_index(position);
                     if new_map_index != anchor.map_index {
-                        *anchor = match &patchwork.maps[new_map_index] {
-                            Map::Remote(map) => Anchor::connect(
-                                map.peer.clone(),
+                        *anchor = match &patchwork.maps[new_map_index].peer_connection {
+                            Some(peer_connection) => Anchor::connect(
+                                peer_connection.peer.clone(),
                                 msg.conn_id,
                                 new_map_index,
-                                map.position.x,
+                                patchwork.maps[new_map_index].position.x,
                                 messenger.clone(),
                                 player_state.clone(),
                             )
                             .unwrap(),
-                            Map::Local(_) => Anchor {
+                            None => Anchor {
                                 conn_id: None,
                                 map_index: new_map_index,
                             },
                         }
                     }
                 }
-                match &patchwork.maps[anchor.map_index] {
-                    Map::Local(_) => {
+                match &patchwork.maps[anchor.map_index].peer_connection {
+                    Some(_) => match msg.packet {
+                        Packet::Unknown => {}
+                        _ => {
+                            send_packet!(messenger, anchor.conn_id.unwrap(), msg.packet).unwrap();
+                        }
+                    },
+                    None => {
                         gameplay_router::route_packet(
                             msg.packet,
                             msg.conn_id,
                             player_state.clone(),
                         );
                     }
-                    Map::Remote(_) => match msg.packet {
-                        Packet::Unknown => {}
-                        _ => {
-                            send_packet!(messenger, anchor.conn_id.unwrap(), msg.packet).unwrap();
-                        }
-                    },
                 }
             }
             PatchworkStateOperations::Report => {
@@ -143,10 +142,7 @@ impl Anchor {
             .send(MessengerOperations::UpdateTranslation(
                 UpdateTranslationMessage {
                     conn_id,
-                    map: packet_processor::Map {
-                        x_origin,
-                        y_origin: 0,
-                    },
+                    map: Map::new(Position { x: x_origin, z: 0 }, 0),
                 },
             ))
             .unwrap();
@@ -191,16 +187,14 @@ impl Patchwork {
     }
 
     pub fn create_local_map(&mut self) {
-        self.maps.push(Map::Local(LocalMap {
-            position: self.next_position(),
-            entity_id_block: self.next_entity_id_block(),
-        }));
+        self.maps
+            .push(Map::new(self.next_position(), self.next_entity_id_block()));
     }
 
     pub fn position_map_index(self, position: Position) -> usize {
         self.maps
             .into_iter()
-            .position(|map| map.position() == position)
+            .position(|map| map.position == position)
             .expect("Could not find map for position")
     }
 
@@ -210,14 +204,12 @@ impl Patchwork {
         messenger: Sender<MessengerOperations>,
         inbound_packet_processor: Sender<PacketProcessorOperations>,
     ) {
-        if let Ok(map) = RemoteMap::try_new(
+        if let Ok(map) = Map::new(self.next_position(), self.next_entity_id_block()).connect(
             messenger,
             inbound_packet_processor,
             peer,
-            self.next_position(),
-            self.next_entity_id_block(),
         ) {
-            self.maps.push(Map::Remote(map));
+            self.maps.push(map);
         }
     }
 

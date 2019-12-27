@@ -14,6 +14,7 @@ mod packet;
 mod packet_processor;
 mod packet_router;
 mod server;
+mod translation;
 
 use game_state::patchwork::{NewMapMessage, PatchworkStateOperations};
 use map::Peer;

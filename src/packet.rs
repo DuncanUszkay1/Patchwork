@@ -4,7 +4,7 @@ use super::game_state::patchwork::{CHUNK_SIZE, ENTITY_ID_BLOCK_SIZE};
 use super::minecraft_protocol::{
     write_var_int, ChunkSection, MinecraftProtocolReader, MinecraftProtocolWriter,
 };
-use super::packet_processor::TranslationInfo;
+use super::translation::TranslationInfo;
 use std::io::{Cursor, Read, Write};
 
 // Format: (state (99 is outgoing), name, id, [ list of (field name, field type) ]

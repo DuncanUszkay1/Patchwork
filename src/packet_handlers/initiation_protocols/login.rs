@@ -6,18 +6,18 @@ use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOper
 use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage, SubscriberType};
 use super::packet;
 use super::packet::Packet;
+use super::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-// Called upon user login
-pub fn init_login(
+pub fn handle_login_packet(
     p: Packet,
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
     block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,
-) {
+) -> TranslationUpdates {
     match p.clone() {
         Packet::LoginStart(login_start) => {
             confirm_login(
@@ -28,6 +28,7 @@ pub fn init_login(
                 block_state,
                 patchwork_state,
             );
+            TranslationUpdates::State(3)
         }
         _ => {
             panic!("Login failed");
@@ -83,8 +84,6 @@ fn confirm_login(
         }))
         .unwrap();
 
-    //report current state to player (soon to be in it's own component for reuse)
-    //the only state we keep right now is players
     player_state
         .send(PlayerStateOperations::Report(player::ReportMessage {
             conn_id,

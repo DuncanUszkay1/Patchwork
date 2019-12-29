@@ -11,3 +11,4 @@ pub mod peer_subscription;
 use super::game_state;
 use super::messenger;
 use super::packet;
+use super::translation::TranslationUpdates;

@@ -1,9 +1,10 @@
 use super::packet::Packet;
+use super::TranslationUpdates;
 
 // Called upon handshake
-pub fn init_handshake(p: Packet) -> i32 {
-    match p.clone() {
+pub fn handle_handshake_packet(p: Packet) -> TranslationUpdates {
+    TranslationUpdates::State(match p.clone() {
         Packet::Handshake(handshake) => handshake.next_state,
         _ => panic!("Invalid packet {:?}", p),
-    }
+    })
 }

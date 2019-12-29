@@ -21,24 +21,18 @@ pub fn route_packet(
     block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,
 ) -> TranslationUpdates {
-    let st = Status::value(state);
+    let st = Status::from_i32(state);
     match st {
-        Status::Handshake => TranslationUpdates::State(handshake::init_handshake(packet)),
-        Status::Login => {
-            login::init_login(
-                packet,
-                conn_id,
-                messenger,
-                player_state,
-                block_state,
-                patchwork_state,
-            );
-            TranslationUpdates::State(3)
-        }
-        Status::ClientPing => {
-            client_ping::init_client_ping(packet, conn_id, messenger);
-            TranslationUpdates::NoChange
-        }
+        Status::Handshake => handshake::handle_handshake_packet(packet),
+        Status::Login => login::handle_login_packet(
+            packet,
+            conn_id,
+            messenger,
+            player_state,
+            block_state,
+            patchwork_state,
+        ),
+        Status::ClientPing => client_ping::handle_client_ping_packet(packet, conn_id, messenger),
         Status::Play => {
             patchwork_state
                 .send(PatchworkStateOperations::RoutePlayerPacket(RouteMessage {
@@ -49,11 +43,7 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::BorderCrossLogin => {
-            if border_cross_login::border_cross_login(packet, conn_id, messenger, player_state) {
-                TranslationUpdates::State(3)
-            } else {
-                TranslationUpdates::NoChange
-            }
+            border_cross_login::border_cross_login(packet, conn_id, messenger, player_state)
         }
         Status::InPeerSub => {
             peer_subscription::handle_peer_packet(packet, messenger);
@@ -82,7 +72,7 @@ enum Status {
 }
 
 impl Status {
-    fn value(status: i32) -> Status {
+    fn from_i32(status: i32) -> Status {
         match status {
             0 => Status::Handshake,
             1 => Status::ClientPing,

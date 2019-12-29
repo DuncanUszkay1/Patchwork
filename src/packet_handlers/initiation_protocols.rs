@@ -13,3 +13,4 @@ pub mod login;
 use super::game_state;
 use super::messenger;
 use super::packet;
+use super::TranslationUpdates;

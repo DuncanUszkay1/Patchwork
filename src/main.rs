@@ -1,17 +1,18 @@
 #[macro_use]
-mod packet_macros;
-#[macro_use]
 mod services;
-mod map;
-mod minecraft_protocol;
-mod packet;
+mod models;
 mod packet_handlers;
-mod packet_router;
 mod server;
-mod translation;
 
 use game_state::patchwork::{NewMapMessage, PatchworkStateOperations};
-use map::Peer;
+
+use packet_handlers::packet_router;
+
+use models::map;
+use models::minecraft_types;
+use models::packet;
+use models::translation;
+
 use services::game_state;
 use services::instance::ServiceInstance;
 use services::keep_alive;
@@ -83,7 +84,7 @@ fn main() {
     patchwork_state
         .sender()
         .send(PatchworkStateOperations::New(NewMapMessage {
-            peer: Peer {
+            peer: map::Peer {
                 port: peer_port,
                 address: peer_address,
             },

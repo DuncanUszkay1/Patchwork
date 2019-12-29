@@ -1,5 +1,5 @@
 #![allow(unused_variables)]
-//Had to disable unused variables here since it wasn't working with packet::new
+//The macro is much cleaner if we allow for unused variables
 use super::game_state::patchwork::{CHUNK_SIZE, ENTITY_ID_BLOCK_SIZE};
 use super::minecraft_protocol::{
     write_var_int, ChunkSection, MinecraftProtocolReader, MinecraftProtocolWriter,

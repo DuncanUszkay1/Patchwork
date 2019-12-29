@@ -1,12 +1,4 @@
-#![allow(unused)] // removing warnings for now since this is not implemented yet
-
-use super::game_state::block;
-use super::game_state::block::BlockStateOperations;
-use super::game_state::patchwork::PatchworkStateOperations;
-use super::game_state::player;
 use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOperations, Position};
-use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage, SubscriberType};
-use super::packet;
 use super::packet::Packet;
 use super::TranslationUpdates;
 use std::sync::mpsc::Sender;
@@ -15,7 +7,6 @@ use uuid::Uuid;
 pub fn border_cross_login(
     p: Packet,
     conn_id: Uuid,
-    messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
 ) -> TranslationUpdates {
     match p {

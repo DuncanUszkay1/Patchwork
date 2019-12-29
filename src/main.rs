@@ -1,23 +1,22 @@
 #[macro_use]
-mod messenger;
-#[macro_use]
 mod packet_macros;
 #[macro_use]
-mod service;
-mod game_state;
-mod keep_alive;
+mod services;
 mod map;
 mod minecraft_protocol;
 mod packet;
 mod packet_handlers;
-mod packet_processor;
 mod packet_router;
 mod server;
 mod translation;
 
 use game_state::patchwork::{NewMapMessage, PatchworkStateOperations};
 use map::Peer;
-use service::ServiceInstance;
+use services::game_state;
+use services::instance::ServiceInstance;
+use services::keep_alive;
+use services::messenger;
+use services::packet_processor;
 
 use std::env;
 use std::thread;

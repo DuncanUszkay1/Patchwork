@@ -29,6 +29,8 @@ impl<O> ServiceInstance<O> {
     }
 }
 
+// 1. Create the service instance struct (which creates a channel for you)
+// 2. Run the service event loop method with a clone of the sender of all services it depends on
 macro_rules! define_services {
     ($( (module: $service:path, name: $service_instance:ident, dependencies: [$($dependency:ident),*])),*) => (
         $(let mut $service_instance = ServiceInstance::new();)*

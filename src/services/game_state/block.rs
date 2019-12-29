@@ -1,5 +1,5 @@
-use super::super::minecraft_protocol::ChunkSection;
 use super::messenger::{MessengerOperations, SendPacketMessage};
+use super::minecraft_protocol::ChunkSection;
 use super::packet::{ChunkData, Packet};
 
 use std::sync::mpsc::Receiver;

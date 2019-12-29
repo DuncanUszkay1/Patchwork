@@ -43,7 +43,7 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::BorderCrossLogin => {
-            border_cross_login::border_cross_login(packet, conn_id, messenger, player_state)
+            border_cross_login::border_cross_login(packet, conn_id, player_state)
         }
         Status::InPeerSub => {
             peer_subscription::handle_peer_packet(packet, messenger);

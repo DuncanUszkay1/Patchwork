@@ -2,7 +2,7 @@ use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::{PatchworkStateOperations, RouteMessage};
 use super::game_state::player::PlayerStateOperations;
 use super::initiation_protocols::{
-    border_cross_login, client_ping, handshake, in_peer_sub, login, out_peer_sub,
+    border_cross_login, client_ping, handshake, login, peer_subscription,
 };
 use super::messenger::MessengerOperations;
 use super::packet::Packet;
@@ -48,20 +48,18 @@ pub fn route_packet(
             TranslationUpdates::NoChange
         }
         Status::BorderCrossLogin => {
-            if border_cross_login::init_border_cross_login(packet, conn_id, messenger, player_state)
-            {
+            if border_cross_login::border_cross_login(packet, conn_id, messenger, player_state) {
                 TranslationUpdates::State(3)
             } else {
                 TranslationUpdates::NoChange
             }
         }
         Status::InPeerSub => {
-            in_peer_sub::init_incoming_peer_sub(packet, conn_id, messenger);
+            peer_subscription::handle_peer_packet(packet, messenger);
             TranslationUpdates::NoChange
         }
         Status::OutPeerSub => {
-            out_peer_sub::init_outgoing_peer_sub(
-                packet,
+            peer_subscription::handle_subscriber_packet(
                 conn_id,
                 messenger,
                 player_state,

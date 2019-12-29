@@ -1,7 +1,7 @@
 use super::messenger::{MessengerOperations, SendPacketMessage};
 use super::packet;
 use super::packet::Packet;
-use super::TranslationUpdates;
+use super::translation::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 

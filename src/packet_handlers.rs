@@ -9,8 +9,8 @@ pub mod initiation_protocols;
 pub mod packet_router;
 pub mod peer_subscription;
 
-use super::game_state;
-use super::messenger;
-use super::packet;
-use super::translation;
-use super::translation::TranslationUpdates;
+use super::services::game_state;
+use super::services::messenger;
+
+use super::models::packet;
+use super::models::translation;

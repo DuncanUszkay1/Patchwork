@@ -1,15 +1,15 @@
-use super::messenger::{MessengerOperations, NewConnectionMessage};
-use super::minecraft_types::read_var_int;
+use super::services::messenger::{MessengerOperations, NewConnectionMessage};
+use super::services::packet_processor::{InboundPacketMessage, PacketProcessorOperations};
+
+use super::models::minecraft_protocol::MinecraftProtocolReader;
 
 use std::env;
-use std::io;
-use std::io::{Cursor, Read};
-use std::net::TcpListener;
-use std::net::TcpStream;
+use std::io::ErrorKind::UnexpectedEof;
+use std::io::{Cursor, Error, Read};
+use std::net::{TcpListener, TcpStream};
+use std::sync::mpsc::Sender;
 use std::thread;
 
-use super::packet_processor::{InboundPacketMessage, PacketProcessorOperations};
-use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
 pub fn listen(
@@ -51,7 +51,7 @@ pub fn handle_connection(
         }))
         .unwrap();
     loop {
-        match read_var_int(&mut stream) {
+        match stream.try_read_var_int() {
             Ok(length) => {
                 let vec: Vec<u8> = (&stream)
                     .bytes()
@@ -70,7 +70,7 @@ pub fn handle_connection(
             }
             Err(e) => {
                 match e.kind() {
-                    io::ErrorKind::UnexpectedEof => {}
+                    UnexpectedEof => {}
                     _ => {
                         panic!("conn closed due to {:?}", e);
                     }
@@ -81,7 +81,7 @@ pub fn handle_connection(
     }
 }
 
-pub fn new_connection(peer_address: String, peer_port: u16) -> Result<TcpStream, io::Error> {
+pub fn new_connection(peer_address: String, peer_port: u16) -> Result<TcpStream, Error> {
     let peer_info = format!("{}:{}", peer_address, peer_port.to_string());
     TcpStream::connect(peer_info)
 }

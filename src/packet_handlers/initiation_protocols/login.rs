@@ -6,7 +6,7 @@ use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOper
 use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage, SubscriberType};
 use super::packet;
 use super::packet::Packet;
-use super::TranslationUpdates;
+use super::translation::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 

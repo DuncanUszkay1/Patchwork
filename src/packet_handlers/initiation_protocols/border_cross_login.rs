@@ -1,6 +1,6 @@
 use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOperations, Position};
 use super::packet::Packet;
-use super::TranslationUpdates;
+use super::translation::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 

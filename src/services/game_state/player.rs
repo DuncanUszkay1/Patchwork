@@ -1,5 +1,5 @@
-use super::super::minecraft_protocol::float_to_angle;
 use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
+use super::minecraft_types::float_to_angle;
 use super::packet::{
     ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook, EntityLookAndMove, JoinGame,
     Packet, PlayerInfo, PlayerPositionAndLook, SpawnPlayer,

@@ -1,5 +1,5 @@
 use super::messenger::{MessengerOperations, NewConnectionMessage};
-use super::minecraft_protocol::read_var_int;
+use super::minecraft_types::read_var_int;
 
 use std::env;
 use std::io;

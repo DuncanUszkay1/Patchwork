@@ -12,7 +12,7 @@ pub mod keep_alive;
 pub mod packet_processor;
 
 use super::map;
-use super::minecraft_protocol;
+use super::minecraft_types;
 use super::packet;
 use super::packet_handlers;
 use super::packet_router;

@@ -11,8 +11,7 @@ use super::packet::Packet;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-// Called by the server when a new player is walking in its map
-pub fn init_border_cross_login(
+pub fn border_cross_login(
     p: Packet,
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,

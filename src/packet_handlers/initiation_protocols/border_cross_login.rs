@@ -8,6 +8,7 @@ use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOper
 use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage, SubscriberType};
 use super::packet;
 use super::packet::Packet;
+use super::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
@@ -16,7 +17,7 @@ pub fn border_cross_login(
     conn_id: Uuid,
     messenger: Sender<MessengerOperations>,
     player_state: Sender<PlayerStateOperations>,
-) -> bool {
+) -> TranslationUpdates {
     match p {
         Packet::PlayerPositionAndLook(packet) => {
             let player = Player {
@@ -42,8 +43,8 @@ pub fn border_cross_login(
                     player,
                 }))
                 .unwrap();
-            true
+            TranslationUpdates::State(3)
         }
-        _ => false,
+        _ => TranslationUpdates::NoChange,
     }
 }

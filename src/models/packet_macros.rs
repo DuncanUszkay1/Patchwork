@@ -38,7 +38,7 @@ macro_rules! packet_boilerplate {
             let mut cursor = Cursor::new(Vec::new());
             match packet {
                 $(Packet::$name(packet) => {
-                    write_var_int(&mut cursor, $name::ID);
+                    cursor.write_var_int($name::ID);
                     packet.write_fields(&mut cursor)
                 })*
                 _ => { panic!("I don't know how to write this packet {:?}", packet) }
@@ -50,7 +50,7 @@ macro_rules! packet_boilerplate {
 
             //Write the length into a vector
             cursor = Cursor::new(Vec::new());
-            write_var_int(&mut cursor, size as i32);
+            cursor.write_var_int(size as i32);
 
             //combine the length vector with the sizing vector to get
             //the full byte vector of the packet

@@ -1,5 +1,5 @@
 use super::packet::Packet;
-use super::TranslationUpdates;
+use super::translation::TranslationUpdates;
 
 // Called upon handshake
 pub fn handle_handshake_packet(p: Packet) -> TranslationUpdates {

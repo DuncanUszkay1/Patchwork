@@ -5,12 +5,11 @@ mod packet_macros;
 #[macro_use]
 mod service;
 mod game_state;
-mod gameplay_router;
-mod initiation_protocols;
 mod keep_alive;
 mod map;
 mod minecraft_protocol;
 mod packet;
+mod packet_handlers;
 mod packet_processor;
 mod packet_router;
 mod server;

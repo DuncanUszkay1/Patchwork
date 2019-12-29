@@ -1,11 +1,12 @@
 use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::{PatchworkStateOperations, RouteMessage};
 use super::game_state::player::PlayerStateOperations;
-use super::initiation_protocols::{
-    border_cross_login, client_ping, handshake, login, peer_subscription,
-};
 use super::messenger::MessengerOperations;
 use super::packet::Packet;
+use super::packet_handlers::initiation_protocols::{
+    border_cross_login, client_ping, handshake, login,
+};
+use super::packet_handlers::peer_subscription;
 use super::translation::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;

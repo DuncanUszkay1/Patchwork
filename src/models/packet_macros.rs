@@ -288,9 +288,16 @@ macro_rules! translate_incoming_packet_field {
     ($value:expr, $transdata:expr) => {
         $value
     };
-    ($value:expr, $transdata:expr, EntityId) => {
-        $value + ($transdata.map.entity_id_block * ENTITY_ID_BLOCK_SIZE)
-    };
+    ($value:expr, $transdata:expr, EntityId) => {{
+        //For now this is hardcoded to assume that the block of anchor ids associated to our
+        //server is 950 to 1000. Later, in settings with three servers, we will need to
+        //determine this range when initially setting up the connection to the peer
+        if $value % ENTITY_ID_BLOCK_SIZE >= 950 {
+            ($value % 1000) - 950
+        } else {
+            $value + ($transdata.map.entity_id_block * ENTITY_ID_BLOCK_SIZE)
+        }
+    }};
     ($value:expr, $transdata:expr, XChunk) => {
         $transdata.map.position.x
     };

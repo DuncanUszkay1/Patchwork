@@ -44,7 +44,7 @@ pub fn route_packet(
             border_cross_login::border_cross_login(packet, conn_id, player_state)
         }
         Status::InPeerSub => {
-            peer_subscription::handle_peer_packet(packet, messenger);
+            peer_subscription::handle_peer_packet(packet, messenger, player_state);
             TranslationUpdates::NoChange
         }
         Status::OutPeerSub => {

@@ -15,7 +15,10 @@ pub fn border_cross_login(
                 conn_id,
                 uuid: Uuid::new_v4(),
                 name: String::from("ghost"),
-                entity_id: 0, // replaced by player state
+                // hard coded to only work for the first player to login
+                // need to augment this packet to include the entity id on the host peer for this
+                // to work
+                entity_id: 950,
                 position: Position {
                     x: packet.x,
                     y: packet.feet_y,

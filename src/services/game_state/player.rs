@@ -1,8 +1,8 @@
 use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
 use super::minecraft_types::float_to_angle;
 use super::packet::{
-    ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook, EntityLookAndMove, JoinGame,
-    Packet, PlayerInfo, PlayerPositionAndLook, SpawnPlayer,
+    ClientboundPlayerPositionAndLook, EntityHeadLook, EntityLookAndMove, JoinGame, Packet,
+    PlayerInfo, PlayerPositionAndLook, SpawnPlayer,
 };
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -15,6 +15,7 @@ pub enum PlayerStateOperations {
     Report(ReportMessage),
     MoveAndLook(PlayerMoveAndLookMessage),
     CrossBorder(CrossBorderMessage),
+    BroadcastAnchoredEvent(BroadcastAnchoredEventMessage),
 }
 
 #[derive(Debug, Clone)]
@@ -38,6 +39,12 @@ pub struct Position {
 pub struct Angle {
     pub pitch: f32,
     pub yaw: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct BroadcastAnchoredEventMessage {
+    pub entity_id: i32,
+    pub packet: Packet,
 }
 
 #[derive(Debug)]
@@ -66,21 +73,25 @@ pub struct PlayerMoveAndLookMessage {
 
 pub fn start(receiver: Receiver<PlayerStateOperations>, messenger: Sender<MessengerOperations>) {
     let mut players = HashMap::<Uuid, Player>::new();
+    let mut entity_conn_ids = HashMap::<i32, Uuid>::new();
 
     while let Ok(msg) = receiver.recv() {
-        handle_message(msg, &mut players, messenger.clone())
+        handle_message(msg, &mut players, &mut entity_conn_ids, messenger.clone())
     }
 }
 
 fn handle_message(
     msg: PlayerStateOperations,
     players: &mut HashMap<Uuid, Player>,
+    entity_conn_ids: &mut HashMap<i32, Uuid>,
     messenger: Sender<MessengerOperations>,
 ) {
     match msg {
         PlayerStateOperations::New(msg) => {
             let mut player = msg.player;
-            player.entity_id = players.len().try_into().expect("too many players");
+            if player.entity_id == 0 {
+                player.entity_id = players.len().try_into().expect("too many players");
+            }
             send_packet!(
                 messenger,
                 msg.conn_id,
@@ -107,6 +118,7 @@ fn handle_message(
                 true
             )
             .unwrap();
+            entity_conn_ids.insert(player.entity_id, msg.conn_id);
             players.insert(msg.conn_id, player);
         }
         PlayerStateOperations::MoveAndLook(msg) => {
@@ -145,17 +157,19 @@ fn handle_message(
                 .unwrap();
             }
         }),
+        //When we get a message from a peer that comes from one of our anchored players we want to
+        //make sure they don't get the result packets.
+        PlayerStateOperations::BroadcastAnchoredEvent(msg) => broadcast_packet!(
+            messenger,
+            msg.packet,
+            entity_conn_ids.get(&msg.entity_id).copied(),
+            true
+        )
+        .unwrap(),
         PlayerStateOperations::CrossBorder(msg) => {
             let player = players
                 .get(&msg.local_conn_id)
                 .expect("Could not cross border: player not found");
-            broadcast_packet!(
-                messenger,
-                Packet::DestroyEntities(player.destroy_entities()),
-                Some(player.conn_id),
-                true
-            )
-            .unwrap();
             send_packet!(
                 messenger,
                 msg.remote_conn_id,
@@ -175,12 +189,6 @@ impl Player {
             yaw: self.angle.yaw,
             pitch: self.angle.pitch,
             on_ground: false,
-        }
-    }
-
-    pub fn destroy_entities(&self) -> DestroyEntities {
-        DestroyEntities {
-            entity_ids: vec![self.entity_id],
         }
     }
 

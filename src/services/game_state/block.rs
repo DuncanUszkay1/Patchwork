@@ -19,29 +19,17 @@ pub struct ReportMessage {
 }
 
 fn fill_dummy_block_ids(ids: &mut Vec<i32>) {
-    //just some random pattern
     while ids.len() < 4096 {
-        match ids.len() % 6 {
-            0 => {
-                ids.push(5);
-            }
-            1 => {
-                ids.push(3);
-            }
-            2 => {
-                ids.push(1);
-            }
-            3 => {
-                ids.push(1);
-            }
-            4 => {
-                ids.push(1);
-            }
-            5 => {
-                ids.push(1);
-            }
-            _ => {
-                panic!("if this happens, all hope is lost");
+        let xz_pos = ids.len() % 256;
+        let z_pos = xz_pos / 16;
+        let x_pos = xz_pos % 16;
+        if x_pos == 0 || x_pos == 15 || z_pos == 0 || z_pos == 15 {
+            ids.push(180)
+        } else {
+            match (x_pos + z_pos) % 2 {
+                0 => ids.push(97),
+                1 => ids.push(103),
+                _ => panic!("math has failed us."),
             }
         }
     }

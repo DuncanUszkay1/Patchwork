@@ -10,6 +10,16 @@ macro_rules! packet_boilerplate {
             $($name($name)),*
         }
 
+        impl<'a> Packet {
+            //Only used for debugging purposes
+            pub fn debug_print_type(&self) -> &'a str {
+                match self {
+                    $(Packet::$name(_) => type_name::<$name>()),*,
+                    Packet::Unknown => "Unknown"
+                }
+            }
+        }
+
         pub fn read<S: MinecraftProtocolReader + Read>(stream: &mut S, state: i32) -> Packet {
             let id = stream.read_var_int();
 

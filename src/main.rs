@@ -14,7 +14,7 @@ use std::thread;
 #[macro_use]
 extern crate log;
 extern crate simplelog;
-use simplelog::{Config, LevelFilter, SimpleLogger};
+use simplelog::{ConfigBuilder, LevelFilter, SimpleLogger};
 
 const DEFAULT_LOGGING_LEVEL: LevelFilter = LevelFilter::Info;
 
@@ -29,7 +29,13 @@ fn main() {
         Err(_) => DEFAULT_LOGGING_LEVEL,
     };
 
-    SimpleLogger::init(level, Config::default()).unwrap();
+    let logger_config = ConfigBuilder::new()
+        .set_max_level(LevelFilter::Off)
+        .set_thread_level(LevelFilter::Off)
+        .set_target_level(LevelFilter::Off)
+        .build();
+
+    SimpleLogger::init(level, logger_config).unwrap();
 
     define_services!(
         (

@@ -92,6 +92,11 @@ fn handle_message(
             if player.entity_id == 0 {
                 player.entity_id = players.len().try_into().expect("too many players");
             }
+            trace!(
+                "Creating new player {:?} for conn_id {:?}",
+                player,
+                msg.conn_id
+            );
             send_packet!(
                 messenger,
                 msg.conn_id,
@@ -122,6 +127,12 @@ fn handle_message(
             players.insert(msg.conn_id, player);
         }
         PlayerStateOperations::MoveAndLook(msg) => {
+            trace!(
+                "Player Move/Look new_position: {:?} new_angle: {:?} for conn_id {:?}",
+                msg.new_position,
+                msg.new_angle,
+                msg.conn_id
+            );
             players.entry(msg.conn_id).and_modify(|player| {
                 broadcast_packet!(
                     messenger,
@@ -142,6 +153,7 @@ fn handle_message(
             });
         }
         PlayerStateOperations::Report(msg) => players.iter().for_each(|(conn_id, player)| {
+            trace!("Reporting Player State to conn_id {:?}", conn_id);
             if *conn_id != msg.conn_id {
                 send_packet!(
                     messenger,
@@ -159,14 +171,18 @@ fn handle_message(
         }),
         //When we get a message from a peer that comes from one of our anchored players we want to
         //make sure they don't get the result packets.
-        PlayerStateOperations::BroadcastAnchoredEvent(msg) => broadcast_packet!(
-            messenger,
-            msg.packet,
-            entity_conn_ids.get(&msg.entity_id).copied(),
-            true
-        )
-        .unwrap(),
+        PlayerStateOperations::BroadcastAnchoredEvent(msg) => {
+            trace!("Broadcasting Anchored Event for entity {:?}", msg.entity_id);
+            broadcast_packet!(
+                messenger,
+                msg.packet,
+                entity_conn_ids.get(&msg.entity_id).copied(),
+                true
+            )
+            .unwrap();
+        }
         PlayerStateOperations::CrossBorder(msg) => {
+            trace!("Crossing Border for conn_id {:?}", msg.local_conn_id);
             let player = players
                 .get(&msg.local_conn_id)
                 .expect("Could not cross border: player not found");

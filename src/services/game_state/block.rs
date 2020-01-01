@@ -39,6 +39,7 @@ pub fn start(receiver: Receiver<BlockStateOperations>, messenger: Sender<Messeng
     while let Ok(msg) = receiver.recv() {
         match msg {
             BlockStateOperations::Report(msg) => {
+                trace!("Reporting block state to {:?}", msg.conn_id);
                 //Just send a hardcoded simple chunk pillar
                 let mut block_ids = Vec::new();
                 fill_dummy_block_ids(&mut block_ids);

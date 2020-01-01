@@ -44,11 +44,14 @@ pub fn start(
 
     while let Ok(msg) = receiver.recv() {
         match msg {
-            PatchworkStateOperations::New(msg) => patchwork.add_peer_map(
-                msg.peer,
-                messenger.clone(),
-                inbound_packet_processor.clone(),
-            ),
+            PatchworkStateOperations::New(msg) => {
+                trace!("Adding Peer Map for peer {:?}", msg.peer);
+                patchwork.add_peer_map(
+                    msg.peer,
+                    messenger.clone(),
+                    inbound_packet_processor.clone(),
+                )
+            }
             PatchworkStateOperations::RoutePlayerPacket(msg) => {
                 let patchwork_clone = patchwork.clone();
                 let anchor = patchwork
@@ -82,10 +85,15 @@ pub fn start(
                     Some(_) => match msg.packet {
                         Packet::Unknown => {}
                         _ => {
+                            trace!(
+                                "Routing packet from conn_id {:?} through anchor",
+                                msg.conn_id
+                            );
                             send_packet!(messenger, anchor.conn_id.unwrap(), msg.packet).unwrap();
                         }
                     },
                     None => {
+                        trace!("Routing packet from conn_id {:?} locally", msg.conn_id);
                         gameplay_router::route_packet(
                             msg.packet,
                             msg.conn_id,
@@ -95,6 +103,7 @@ pub fn start(
                 }
             }
             PatchworkStateOperations::Report => {
+                trace!("Reporting patchwork state");
                 patchwork.clone().report(messenger.clone());
             }
         }

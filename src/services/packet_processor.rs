@@ -39,13 +39,14 @@ pub fn start_inbound(
     while let Ok(msg) = receiver.recv() {
         match msg {
             PacketProcessorOperations::Inbound(msg) => {
+                trace!("Received packet from conn_id {:?}", msg.conn_id);
                 let translation_data = translation_data
                     .entry(msg.conn_id)
                     .or_insert_with(TranslationInfo::new);
 
                 let packet = read(&mut msg.cursor.clone(), translation_data.state);
                 let packet = translate(packet, translation_data.clone());
-                translation_data.update(&packet_router::route_packet(
+                let translation_update = packet_router::route_packet(
                     packet,
                     translation_data.state,
                     msg.conn_id,
@@ -53,9 +54,25 @@ pub fn start_inbound(
                     player_state.clone(),
                     block_state.clone(),
                     patchwork_state.clone(),
-                ));
+                );
+                match translation_update {
+                    TranslationUpdates::NoChange => {}
+                    _ => {
+                        trace!(
+                            "Incoming translation update {:?} for conn_id {:?}",
+                            translation_update,
+                            msg.conn_id
+                        );
+                    }
+                }
+                translation_data.update(&translation_update);
             }
             PacketProcessorOperations::SetTranslationData(msg) => {
+                trace!(
+                    "Applying translation updates {:?} to {:?}",
+                    msg.updates,
+                    msg.conn_id
+                );
                 let data = translation_data
                     .entry(msg.conn_id)
                     .or_insert_with(TranslationInfo::new);

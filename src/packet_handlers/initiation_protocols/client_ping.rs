@@ -1,17 +1,16 @@
-use super::messenger::{MessengerOperations, SendPacketMessage};
+use super::messenger::Messenger;
 use super::packet;
 use super::packet::Packet;
 use super::translation::TranslationUpdates;
-use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
 const FAKE_RESPONSE: &str = "{\"version\": {\"name\": \"1.13.2\",\"protocol\": 404},\"players\": {\"max\": 100,\"online\": 5,\"sample\": [{\"name\": \"thinkofdeath\",\"id\": \"4566e69f-c907-48ee-8d71-d7ba5aa00d20\"}]},\"description\": {\"text\": \"Hello world\"},\"favicon\": \"data:image/png;base64,<data>\"}";
 
 // Called when client pings the server
-pub fn handle_client_ping_packet(
+pub fn handle_client_ping_packet<M: Messenger>(
     p: Packet,
     conn_id: Uuid,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
 ) -> TranslationUpdates {
     match p.clone() {
         Packet::StatusRequest(_) => {
@@ -19,13 +18,13 @@ pub fn handle_client_ping_packet(
                 json_response: String::from(FAKE_RESPONSE),
             };
 
-            send_packet!(messenger, conn_id, Packet::StatusResponse(status_response)).unwrap();
+            messenger.send_packet(conn_id, Packet::StatusResponse(status_response));
         }
         Packet::Ping(ping) => {
             let pong = packet::Pong {
                 payload: ping.payload,
             };
-            send_packet!(messenger, conn_id, Packet::Pong(pong)).unwrap();
+            messenger.send_packet(conn_id, Packet::Pong(pong));
         }
         _ => {}
     }

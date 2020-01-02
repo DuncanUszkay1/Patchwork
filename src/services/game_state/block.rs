@@ -1,9 +1,8 @@
-use super::messenger::{MessengerOperations, SendPacketMessage};
+use super::messenger::Messenger;
 use super::minecraft_types::ChunkSection;
 use super::packet::{ChunkData, Packet};
 
 use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
 // We don't really have any meaningful block state yet- it cannot be changed or be particularly
@@ -35,7 +34,7 @@ fn fill_dummy_block_ids(ids: &mut Vec<i32>) {
     }
 }
 
-pub fn start(receiver: Receiver<BlockStateOperations>, messenger: Sender<MessengerOperations>) {
+pub fn start<M: Messenger>(receiver: Receiver<BlockStateOperations>, messenger: M) {
     while let Ok(msg) = receiver.recv() {
         match msg {
             BlockStateOperations::Report(msg) => {
@@ -43,8 +42,7 @@ pub fn start(receiver: Receiver<BlockStateOperations>, messenger: Sender<Messeng
                 //Just send a hardcoded simple chunk pillar
                 let mut block_ids = Vec::new();
                 fill_dummy_block_ids(&mut block_ids);
-                send_packet!(
-                    messenger,
+                messenger.send_packet(
                     msg.conn_id,
                     Packet::ChunkData(ChunkData {
                         chunk_x: 0,
@@ -61,9 +59,8 @@ pub fn start(receiver: Receiver<BlockStateOperations>, messenger: Sender<Messeng
                         },
                         biomes: vec![127; 256],
                         number_of_block_entities: 0,
-                    })
-                )
-                .unwrap();
+                    }),
+                );
             }
         }
     }

@@ -2,7 +2,7 @@ use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::{PatchworkStateOperations, RouteMessage};
 use super::game_state::player::PlayerStateOperations;
 use super::initiation_protocols::{border_cross_login, client_ping, handshake, login};
-use super::messenger::MessengerOperations;
+use super::messenger::Messenger;
 use super::packet::Packet;
 use super::peer_subscription;
 use super::translation::TranslationUpdates;
@@ -10,11 +10,11 @@ use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
 // Routes the packet to the corresponding service according to the connection state
-pub fn route_packet(
+pub fn route_packet<M: Messenger + Clone>(
     packet: Packet,
     state: i32,
     conn_id: Uuid,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
     player_state: Sender<PlayerStateOperations>,
     block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,

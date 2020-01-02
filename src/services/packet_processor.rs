@@ -1,7 +1,7 @@
 use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player::PlayerStateOperations;
-use super::messenger::MessengerOperations;
+use super::messenger::Messenger;
 use super::packet::{read, translate};
 use super::packet_router;
 use super::translation::{TranslationInfo, TranslationUpdates};
@@ -27,9 +27,9 @@ pub struct TranslationDataMessage {
     pub updates: Vec<TranslationUpdates>,
 }
 
-pub fn start_inbound(
+pub fn start_inbound<M: Messenger + Clone>(
     receiver: Receiver<PacketProcessorOperations>,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
     player_state: Sender<PlayerStateOperations>,
     block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,

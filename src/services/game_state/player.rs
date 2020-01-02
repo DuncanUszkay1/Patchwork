@@ -1,4 +1,4 @@
-use super::messenger::{BroadcastPacketMessage, MessengerOperations, SendPacketMessage};
+use super::messenger::Messenger;
 use super::minecraft_types::float_to_angle;
 use super::packet::{
     ClientboundPlayerPositionAndLook, EntityHeadLook, EntityLookAndMove, JoinGame, Packet,
@@ -7,7 +7,6 @@ use super::packet::{
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::mpsc::Receiver;
-use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
 pub enum PlayerStateOperations {
@@ -71,7 +70,7 @@ pub struct PlayerMoveAndLookMessage {
     pub new_angle: Option<Angle>,
 }
 
-pub fn start(receiver: Receiver<PlayerStateOperations>, messenger: Sender<MessengerOperations>) {
+pub fn start<M: Messenger + Clone>(receiver: Receiver<PlayerStateOperations>, messenger: M) {
     let mut players = HashMap::<Uuid, Player>::new();
     let mut entity_conn_ids = HashMap::<i32, Uuid>::new();
 
@@ -80,11 +79,11 @@ pub fn start(receiver: Receiver<PlayerStateOperations>, messenger: Sender<Messen
     }
 }
 
-fn handle_message(
+fn handle_message<M: Messenger>(
     msg: PlayerStateOperations,
     players: &mut HashMap<Uuid, Player>,
     entity_conn_ids: &mut HashMap<i32, Uuid>,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
 ) {
     match msg {
         PlayerStateOperations::New(msg) => {
@@ -97,32 +96,21 @@ fn handle_message(
                 player,
                 msg.conn_id
             );
-            send_packet!(
-                messenger,
+            messenger.send_packet(msg.conn_id, Packet::JoinGame(player.join_game_packet()));
+            messenger.send_packet(
                 msg.conn_id,
-                Packet::JoinGame(player.join_game_packet())
-            )
-            .unwrap();
-            send_packet!(
-                messenger,
-                msg.conn_id,
-                Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_packet())
-            )
-            .unwrap();
-            broadcast_packet!(
-                messenger,
+                Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_packet()),
+            );
+            messenger.broadcast_packet(
                 Packet::PlayerInfo(player.player_info_packet()),
                 Some(msg.conn_id),
-                true
-            )
-            .unwrap();
-            broadcast_packet!(
-                messenger,
+                true,
+            );
+            messenger.broadcast_packet(
                 Packet::SpawnPlayer(player.spawn_player_packet()),
                 Some(msg.conn_id),
-                true
-            )
-            .unwrap();
+                true,
+            );
             entity_conn_ids.insert(player.entity_id, msg.conn_id);
             players.insert(msg.conn_id, player);
         }
@@ -134,64 +122,49 @@ fn handle_message(
                 msg.conn_id
             );
             players.entry(msg.conn_id).and_modify(|player| {
-                broadcast_packet!(
-                    messenger,
+                messenger.broadcast_packet(
                     Packet::EntityLookAndMove(
-                        player.move_and_look(msg.new_position, msg.new_angle)
+                        player.move_and_look(msg.new_position, msg.new_angle),
                     ),
                     Some(player.conn_id),
-                    true
-                )
-                .unwrap();
-                broadcast_packet!(
-                    messenger,
+                    true,
+                );
+                messenger.broadcast_packet(
                     Packet::EntityHeadLook(player.entity_head_look()),
                     Some(player.conn_id),
-                    true
-                )
-                .unwrap()
+                    true,
+                );
             });
         }
         PlayerStateOperations::Report(msg) => players.iter().for_each(|(conn_id, player)| {
             trace!("Reporting Player State to conn_id {:?}", conn_id);
             if *conn_id != msg.conn_id {
-                send_packet!(
-                    messenger,
+                messenger.send_packet(msg.conn_id, Packet::PlayerInfo(player.player_info_packet()));
+                messenger.send_packet(
                     msg.conn_id,
-                    Packet::PlayerInfo(player.player_info_packet())
-                )
-                .unwrap();
-                send_packet!(
-                    messenger,
-                    msg.conn_id,
-                    Packet::SpawnPlayer(player.spawn_player_packet())
-                )
-                .unwrap();
+                    Packet::SpawnPlayer(player.spawn_player_packet()),
+                );
             }
         }),
         //When we get a message from a peer that comes from one of our anchored players we want to
         //make sure they don't get the result packets.
         PlayerStateOperations::BroadcastAnchoredEvent(msg) => {
             trace!("Broadcasting Anchored Event for entity {:?}", msg.entity_id);
-            broadcast_packet!(
-                messenger,
+            messenger.broadcast_packet(
                 msg.packet,
                 entity_conn_ids.get(&msg.entity_id).copied(),
-                true
-            )
-            .unwrap();
+                true,
+            );
         }
         PlayerStateOperations::CrossBorder(msg) => {
             trace!("Crossing Border for conn_id {:?}", msg.local_conn_id);
             let player = players
                 .get(&msg.local_conn_id)
                 .expect("Could not cross border: player not found");
-            send_packet!(
-                messenger,
+            messenger.send_packet(
                 msg.remote_conn_id,
-                Packet::PlayerPositionAndLook(player.player_position_and_look())
-            )
-            .unwrap();
+                Packet::PlayerPositionAndLook(player.player_position_and_look()),
+            );
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::messenger::{MessengerOperations, NewConnectionMessage, SendPacketMessage};
+use super::messenger::Messenger;
 use super::packet::{Handshake, Packet};
 use super::packet_processor::{PacketProcessorOperations, TranslationDataMessage};
 use super::server;
@@ -34,19 +34,17 @@ pub struct Position {
 }
 
 impl Map {
-    pub fn report(&self, messenger: Sender<MessengerOperations>) {
+    pub fn report<M: Messenger>(&self, messenger: M) {
         if let Some(peer_connection) = &self.peer_connection {
-            send_packet!(
-                messenger,
+            messenger.send_packet(
                 peer_connection.conn_id,
                 Packet::Handshake(Handshake {
                     protocol_version: 404,
                     server_address: String::from(""), //Neither of these fields are actually used
                     server_port: 0,
                     next_state: 5,
-                })
-            )
-            .unwrap();
+                }),
+            );
         }
     }
 
@@ -58,20 +56,15 @@ impl Map {
         }
     }
 
-    pub fn connect(
+    pub fn connect<M: 'static + Messenger + Clone + Send>(
         &self,
-        messenger: Sender<MessengerOperations>,
+        messenger: M,
         inbound_packet_processor: Sender<PacketProcessorOperations>,
         peer: Peer,
     ) -> Result<Map, io::Error> {
         let conn_id = Uuid::new_v4();
         let stream = server::new_connection(peer.address.clone(), peer.port)?;
-        messenger
-            .send(MessengerOperations::New(NewConnectionMessage {
-                conn_id,
-                socket: stream.try_clone().unwrap(),
-            }))
-            .unwrap();
+        messenger.new_connection(conn_id, stream.try_clone().unwrap());
         inbound_packet_processor
             .send(PacketProcessorOperations::SetTranslationData(
                 TranslationDataMessage {
@@ -100,33 +93,29 @@ impl Map {
             position: self.position,
             entity_id_block: self.entity_id_block,
         };
-        send_packet!(
-            messenger,
+        messenger.send_packet(
             conn_id,
             Packet::Handshake(Handshake {
                 protocol_version: 404,
                 server_address: String::from(""),
                 server_port: 0,
                 next_state: 6,
-            })
-        )
-        .unwrap();
+            }),
+        );
 
         //we send two packets because our protocol requires at least two packets to be sent
         //before it can do anything- the first is a handshake, then the second one it can
         //actually response to (it ignores the type of packet, so we just send it random data)
         //to be changed later with a real request packet
-        send_packet!(
-            messenger,
+        messenger.send_packet(
             conn_id,
             Packet::Handshake(Handshake {
                 protocol_version: 404,
                 server_address: String::from(""),
                 server_port: 0,
                 next_state: 6,
-            })
-        )
-        .unwrap();
+            }),
+        );
         Ok(map)
     }
 }

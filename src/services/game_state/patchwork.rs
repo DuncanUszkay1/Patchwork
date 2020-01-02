@@ -1,8 +1,6 @@
 use super::gameplay_router;
 use super::map::{Map, Peer, Position};
-use super::messenger::{
-    MessengerOperations, NewConnectionMessage, SendPacketMessage, UpdateTranslationMessage,
-};
+use super::messenger::Messenger;
 use super::packet;
 use super::packet::Packet;
 use super::packet_processor::PacketProcessorOperations;
@@ -34,9 +32,9 @@ pub struct RouteMessage {
     pub conn_id: Uuid,
 }
 
-pub fn start(
+pub fn start<M: 'static + Messenger + Clone + Send>(
     receiver: Receiver<PatchworkStateOperations>,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
     inbound_packet_processor: Sender<PacketProcessorOperations>,
     player_state: Sender<PlayerStateOperations>,
 ) {
@@ -89,7 +87,7 @@ pub fn start(
                                 "Routing packet from conn_id {:?} through anchor",
                                 msg.conn_id
                             );
-                            send_packet!(messenger, anchor.conn_id.unwrap(), msg.packet).unwrap();
+                            messenger.send_packet(anchor.conn_id.unwrap(), msg.packet);
                         }
                     },
                     None => {
@@ -131,41 +129,27 @@ struct Anchor {
 }
 
 impl Anchor {
-    pub fn connect(
+    pub fn connect<M: Messenger>(
         peer: Peer,
         local_conn_id: Uuid,
         map_index: usize,
         x_origin: i32,
-        messenger: Sender<MessengerOperations>,
+        messenger: M,
         player_state: Sender<PlayerStateOperations>,
     ) -> Result<Anchor, io::Error> {
         let conn_id = Uuid::new_v4();
         let stream = server::new_connection(peer.address.clone(), peer.port)?;
-        messenger
-            .send(MessengerOperations::New(NewConnectionMessage {
-                conn_id,
-                socket: stream.try_clone().unwrap(),
-            }))
-            .unwrap();
-        messenger
-            .send(MessengerOperations::UpdateTranslation(
-                UpdateTranslationMessage {
-                    conn_id,
-                    map: Map::new(Position { x: x_origin, z: 0 }, 0),
-                },
-            ))
-            .unwrap();
-        send_packet!(
-            messenger,
+        messenger.new_connection(conn_id, stream.try_clone().unwrap());
+        messenger.update_translation(conn_id, Map::new(Position { x: x_origin, z: 0 }, 0));
+        messenger.send_packet(
             conn_id,
             Packet::Handshake(packet::Handshake {
                 protocol_version: 404,
                 server_address: String::from(""), //Neither of these fields are actually used
                 server_port: 0,
                 next_state: 4,
-            })
-        )
-        .unwrap();
+            }),
+        );
         player_state
             .send(PlayerStateOperations::CrossBorder(CrossBorderMessage {
                 local_conn_id,
@@ -207,10 +191,10 @@ impl Patchwork {
             .expect("Could not find map for position")
     }
 
-    pub fn add_peer_map(
+    pub fn add_peer_map<M: 'static + Messenger + Send + Clone>(
         &mut self,
         peer: Peer,
-        messenger: Sender<MessengerOperations>,
+        messenger: M,
         inbound_packet_processor: Sender<PacketProcessorOperations>,
     ) {
         if let Ok(map) = Map::new(self.next_position(), self.next_entity_id_block()).connect(
@@ -222,7 +206,7 @@ impl Patchwork {
         }
     }
 
-    pub fn report(self, messenger: Sender<MessengerOperations>) {
+    pub fn report<M: Messenger + Clone>(self, messenger: M) {
         self.maps
             .into_iter()
             .for_each(|map| map.report(messenger.clone()));

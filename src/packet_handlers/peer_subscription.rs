@@ -1,6 +1,4 @@
-use super::messenger::{
-    BroadcastPacketMessage, MessengerOperations, SubscribeMessage, SubscriberType,
-};
+use super::messenger::{Messenger, SubscriberType};
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -10,15 +8,15 @@ use super::game_state::block::BlockStateOperations;
 use super::game_state::player;
 use super::game_state::player::PlayerStateOperations;
 
-pub fn handle_peer_packet(
+pub fn handle_peer_packet<M: Messenger>(
     packet: Packet,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
     player_state: Sender<PlayerStateOperations>,
 ) {
     match packet.clone() {
         Packet::SpawnPlayer(packet) => {
             if packet.entity_id >= 1000 {
-                broadcast_packet!(messenger, Packet::SpawnPlayer(packet), None, false).unwrap();
+                messenger.broadcast_packet(Packet::SpawnPlayer(packet), None, false);
             }
         }
         //We really don't want to have to do this for every type of packet that has an entity id
@@ -30,7 +28,7 @@ pub fn handle_peer_packet(
             source_anchored_event(Packet::EntityLookAndMove(packet), entity_id, player_state);
         }
         _ => {
-            broadcast_packet!(messenger, packet, None, false).unwrap();
+            messenger.broadcast_packet(packet, None, false);
         }
     }
 }
@@ -47,21 +45,16 @@ fn source_anchored_event(
         .unwrap();
 }
 
-pub fn handle_subscriber_packet(
+pub fn handle_subscriber_packet<M: Messenger>(
     conn_id: Uuid,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
     player_state: Sender<PlayerStateOperations>,
     block_state: Sender<BlockStateOperations>,
 ) {
     //Everytime a subscriber sends us a packet, we subscribe them to our messages and report our
     //state to them
 
-    messenger
-        .send(MessengerOperations::Subscribe(SubscribeMessage {
-            conn_id,
-            typ: SubscriberType::LocalOnly,
-        }))
-        .unwrap();
+    messenger.subscribe(conn_id, SubscriberType::LocalOnly);
 
     player_state
         .send(PlayerStateOperations::Report(player::ReportMessage {

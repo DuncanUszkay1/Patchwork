@@ -3,17 +3,17 @@ use super::game_state::block::BlockStateOperations;
 use super::game_state::patchwork::PatchworkStateOperations;
 use super::game_state::player;
 use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOperations, Position};
-use super::messenger::{MessengerOperations, SendPacketMessage, SubscribeMessage, SubscriberType};
+use super::messenger::{Messenger, SubscriberType};
 use super::packet;
 use super::packet::Packet;
 use super::translation::TranslationUpdates;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-pub fn handle_login_packet(
+pub fn handle_login_packet<M: Messenger + Clone>(
     p: Packet,
     conn_id: Uuid,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
     player_state: Sender<PlayerStateOperations>,
     block_state: Sender<BlockStateOperations>,
     patchwork_state: Sender<PatchworkStateOperations>,
@@ -36,9 +36,9 @@ pub fn handle_login_packet(
     }
 }
 
-fn confirm_login(
+fn confirm_login<M: Messenger + Clone>(
     conn_id: Uuid,
-    messenger: Sender<MessengerOperations>,
+    messenger: M,
     login_start: packet::LoginStart,
     player_state: Sender<PlayerStateOperations>,
     block_state: Sender<BlockStateOperations>,
@@ -77,12 +77,7 @@ fn confirm_login(
         }))
         .unwrap();
 
-    messenger
-        .send(MessengerOperations::Subscribe(SubscribeMessage {
-            conn_id,
-            typ: SubscriberType::All,
-        }))
-        .unwrap();
+    messenger.subscribe(conn_id, SubscriberType::All);
 
     player_state
         .send(PlayerStateOperations::Report(player::ReportMessage {
@@ -95,10 +90,10 @@ fn confirm_login(
         .unwrap();
 }
 
-fn login_success(conn_id: Uuid, messenger: Sender<MessengerOperations>, player: Player) {
+fn login_success<M: Messenger>(conn_id: Uuid, messenger: M, player: Player) {
     let login_success = packet::LoginSuccess {
         uuid: player.uuid.to_hyphenated().to_string(),
         username: player.name,
     };
-    send_packet!(messenger, conn_id, Packet::LoginSuccess(login_success)).unwrap();
+    messenger.send_packet(conn_id, Packet::LoginSuccess(login_success));
 }

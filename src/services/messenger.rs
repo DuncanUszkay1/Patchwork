@@ -3,26 +3,57 @@ use super::packet::{translate_outgoing, write, Packet};
 use super::translation::TranslationInfo;
 use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
-macro_rules! send_packet {
-    ($messenger:expr, $conn_id:expr, $packet:expr) => {
-        $messenger.send(MessengerOperations::Send(SendPacketMessage {
-            conn_id: $conn_id,
-            packet: $packet,
-        }))
-    };
+pub trait Messenger {
+    fn send_packet(&self, conn_id: Uuid, packet: Packet);
+    fn broadcast_packet(&self, packet: Packet, source_conn_id: Option<Uuid>, local: bool);
+    fn subscribe(&self, conn_id: Uuid, typ: SubscriberType);
+    fn new_connection(&self, conn_id: Uuid, socket: TcpStream);
+    fn update_translation(&self, conn_id: Uuid, map: Map);
 }
 
-macro_rules! broadcast_packet {
-    ($messenger:expr, $packet:expr, $source_conn_id: expr, $local: expr) => {
-        $messenger.send(MessengerOperations::Broadcast(BroadcastPacketMessage {
-            packet: $packet,
-            source_conn_id: $source_conn_id,
-            local: $local,
+impl Messenger for Sender<MessengerOperations> {
+    fn send_packet(&self, conn_id: Uuid, packet: Packet) {
+        self.send(MessengerOperations::Send(SendPacketMessage {
+            conn_id,
+            packet,
         }))
-    };
+        .unwrap();
+    }
+
+    fn broadcast_packet(&self, packet: Packet, source_conn_id: Option<Uuid>, local: bool) {
+        self.send(MessengerOperations::Broadcast(BroadcastPacketMessage {
+            packet,
+            source_conn_id,
+            local,
+        }))
+        .unwrap();
+    }
+
+    fn subscribe(&self, conn_id: Uuid, typ: SubscriberType) {
+        self.send(MessengerOperations::Subscribe(SubscribeMessage {
+            conn_id,
+            typ,
+        }))
+        .unwrap();
+    }
+
+    fn new_connection(&self, conn_id: Uuid, socket: TcpStream) {
+        self.send(MessengerOperations::New(NewConnectionMessage {
+            conn_id,
+            socket,
+        }))
+        .unwrap();
+    }
+
+    fn update_translation(&self, conn_id: Uuid, map: Map) {
+        self.send(MessengerOperations::UpdateTranslation(
+            UpdateTranslationMessage { conn_id, map },
+        ))
+        .unwrap();
+    }
 }
 
 pub enum MessengerOperations {

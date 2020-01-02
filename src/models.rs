@@ -6,7 +6,6 @@ pub mod minecraft_types;
 pub mod packet;
 pub mod translation;
 
-use super::services::game_state;
-
+use super::constants;
 use super::interfaces;
 use super::server;

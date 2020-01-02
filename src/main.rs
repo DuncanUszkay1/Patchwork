@@ -1,5 +1,6 @@
 #[macro_use]
 mod services;
+mod constants;
 mod interfaces;
 mod models;
 mod packet_handlers;
@@ -40,17 +41,17 @@ fn main() {
 
     define_services!(
         (
-            module: services::game_state::player::start,
+            module: services::player::start,
             name: player_state,
             dependencies: [messenger]
         ),
         (
-            module: services::game_state::block::start,
+            module: services::block::start,
             name: block_state,
             dependencies: [messenger]
         ),
         (
-            module: services::game_state::patchwork::start,
+            module: services::patchwork::start,
             name: patchwork_state,
             dependencies: [messenger, inbound_packet_processor, player_state]
         ),

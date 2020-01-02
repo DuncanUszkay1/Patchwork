@@ -7,9 +7,11 @@
 pub mod instance;
 #[macro_use]
 pub mod messenger;
-pub mod game_state;
+pub mod block;
 pub mod keep_alive;
 pub mod packet_processor;
+pub mod patchwork;
+pub mod player;
 
 use super::models::map;
 use super::models::minecraft_types;
@@ -17,6 +19,6 @@ use super::models::packet;
 use super::models::translation;
 
 use super::interfaces;
+
 use super::packet_handlers;
-use super::packet_handlers::packet_router;
 use super::server;

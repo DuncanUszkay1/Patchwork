@@ -45,6 +45,26 @@ pub fn start<
                         map_index: 0,
                         conn_id: None,
                     });
+                match &patchwork.maps[anchor.map_index].peer_connection {
+                    Some(_) => match msg.packet {
+                        Packet::Unknown => {}
+                        _ => {
+                            trace!(
+                                "Routing packet from conn_id {:?} through anchor",
+                                msg.conn_id
+                            );
+                            messenger.send_packet(anchor.conn_id.unwrap(), msg.packet.clone());
+                        }
+                    },
+                    None => {
+                        trace!("Routing packet from conn_id {:?} locally", msg.conn_id);
+                        gameplay_router::route_packet(
+                            msg.packet.clone(),
+                            msg.conn_id,
+                            player_state.clone(),
+                        );
+                    }
+                }
                 if let Some(position) = extract_map_position(msg.clone().packet) {
                     let new_map_index = patchwork_clone.position_map_index(position);
                     if new_map_index != anchor.map_index {
@@ -63,26 +83,6 @@ pub fn start<
                                 map_index: new_map_index,
                             },
                         }
-                    }
-                }
-                match &patchwork.maps[anchor.map_index].peer_connection {
-                    Some(_) => match msg.packet {
-                        Packet::Unknown => {}
-                        _ => {
-                            trace!(
-                                "Routing packet from conn_id {:?} through anchor",
-                                msg.conn_id
-                            );
-                            messenger.send_packet(anchor.conn_id.unwrap(), msg.packet);
-                        }
-                    },
-                    None => {
-                        trace!("Routing packet from conn_id {:?} locally", msg.conn_id);
-                        gameplay_router::route_packet(
-                            msg.packet,
-                            msg.conn_id,
-                            player_state.clone(),
-                        );
                     }
                 }
             }

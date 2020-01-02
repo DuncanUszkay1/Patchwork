@@ -6,8 +6,63 @@ use super::packet::{
 };
 use std::collections::HashMap;
 use std::convert::TryInto;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
+
+pub trait PlayerState {
+    fn new_player(&self, conn_id: Uuid, player: Player);
+    fn report(&self, conn_id: Uuid);
+    fn move_and_look(
+        &self,
+        conn_id: Uuid,
+        new_position: Option<Position>,
+        new_angle: Option<Angle>,
+    );
+    fn cross_border(&self, local_conn_id: Uuid, remote_conn_id: Uuid);
+    fn broadcast_anchored_event(&self, entity_id: i32, packet: Packet);
+}
+
+impl PlayerState for Sender<PlayerStateOperations> {
+    fn new_player(&self, conn_id: Uuid, player: Player) {
+        self.send(PlayerStateOperations::New(NewPlayerMessage {
+            conn_id,
+            player,
+        }))
+        .unwrap();
+    }
+    fn report(&self, conn_id: Uuid) {
+        self.send(PlayerStateOperations::Report(ReportMessage { conn_id }))
+            .unwrap();
+    }
+    fn move_and_look(
+        &self,
+        conn_id: Uuid,
+        new_position: Option<Position>,
+        new_angle: Option<Angle>,
+    ) {
+        self.send(PlayerStateOperations::MoveAndLook(
+            PlayerMoveAndLookMessage {
+                conn_id,
+                new_position,
+                new_angle,
+            },
+        ))
+        .unwrap();
+    }
+    fn cross_border(&self, local_conn_id: Uuid, remote_conn_id: Uuid) {
+        self.send(PlayerStateOperations::CrossBorder(CrossBorderMessage {
+            local_conn_id,
+            remote_conn_id,
+        }))
+        .unwrap();
+    }
+    fn broadcast_anchored_event(&self, entity_id: i32, packet: Packet) {
+        self.send(PlayerStateOperations::BroadcastAnchoredEvent(
+            BroadcastAnchoredEventMessage { entity_id, packet },
+        ))
+        .unwrap();
+    }
+}
 
 pub enum PlayerStateOperations {
     New(NewPlayerMessage),

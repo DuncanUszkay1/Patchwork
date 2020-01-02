@@ -1,13 +1,12 @@
-use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOperations, Position};
+use super::game_state::player::{Angle, Player, PlayerState, Position};
 use super::packet::Packet;
 use super::translation::TranslationUpdates;
-use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-pub fn border_cross_login(
+pub fn border_cross_login<P: PlayerState>(
     p: Packet,
     conn_id: Uuid,
-    player_state: Sender<PlayerStateOperations>,
+    player_state: P,
 ) -> TranslationUpdates {
     match p {
         Packet::PlayerPositionAndLook(packet) => {
@@ -31,12 +30,7 @@ pub fn border_cross_login(
             };
 
             //update the gamestate with this new player
-            player_state
-                .send(PlayerStateOperations::New(NewPlayerMessage {
-                    conn_id,
-                    player,
-                }))
-                .unwrap();
+            player_state.new_player(conn_id, player);
             TranslationUpdates::State(3)
         }
         _ => TranslationUpdates::NoChange,

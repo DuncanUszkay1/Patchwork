@@ -1,17 +1,14 @@
 use super::messenger::{Messenger, SubscriberType};
 use super::packet::Packet;
-use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-use super::game_state::block;
-use super::game_state::block::BlockStateOperations;
-use super::game_state::player;
-use super::game_state::player::PlayerStateOperations;
+use super::game_state::block::BlockState;
+use super::game_state::player::PlayerState;
 
-pub fn handle_peer_packet<M: Messenger>(
+pub fn handle_peer_packet<M: Messenger, P: PlayerState>(
     packet: Packet,
     messenger: M,
-    player_state: Sender<PlayerStateOperations>,
+    player_state: P,
 ) {
     match packet.clone() {
         Packet::SpawnPlayer(packet) => {
@@ -25,7 +22,7 @@ pub fn handle_peer_packet<M: Messenger>(
         //have an entity id in them
         Packet::EntityLookAndMove(packet) => {
             let entity_id = packet.entity_id;
-            source_anchored_event(Packet::EntityLookAndMove(packet), entity_id, player_state);
+            player_state.broadcast_anchored_event(entity_id, Packet::EntityLookAndMove(packet));
         }
         _ => {
             messenger.broadcast_packet(packet, None, false);
@@ -33,38 +30,16 @@ pub fn handle_peer_packet<M: Messenger>(
     }
 }
 
-fn source_anchored_event(
-    packet: Packet,
-    entity_id: i32,
-    player_state: Sender<PlayerStateOperations>,
-) {
-    player_state
-        .send(PlayerStateOperations::BroadcastAnchoredEvent(
-            player::BroadcastAnchoredEventMessage { entity_id, packet },
-        ))
-        .unwrap();
-}
-
-pub fn handle_subscriber_packet<M: Messenger>(
+pub fn handle_subscriber_packet<M: Messenger, P: PlayerState, B: BlockState>(
     conn_id: Uuid,
     messenger: M,
-    player_state: Sender<PlayerStateOperations>,
-    block_state: Sender<BlockStateOperations>,
+    player_state: P,
+    block_state: B,
 ) {
     //Everytime a subscriber sends us a packet, we subscribe them to our messages and report our
     //state to them
 
     messenger.subscribe(conn_id, SubscriberType::LocalOnly);
-
-    player_state
-        .send(PlayerStateOperations::Report(player::ReportMessage {
-            conn_id,
-        }))
-        .unwrap();
-
-    block_state
-        .send(BlockStateOperations::Report(block::ReportMessage {
-            conn_id,
-        }))
-        .unwrap();
+    player_state.report(conn_id);
+    block_state.report(conn_id);
 }

@@ -2,11 +2,22 @@ use super::messenger::Messenger;
 use super::minecraft_types::ChunkSection;
 use super::packet::{ChunkData, Packet};
 
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
 // We don't really have any meaningful block state yet- it cannot be changed or be particularly
 // complicated. We can build this up later
+
+pub trait BlockState {
+    fn report(&self, conn_id: Uuid);
+}
+
+impl BlockState for Sender<BlockStateOperations> {
+    fn report(&self, conn_id: Uuid) {
+        self.send(BlockStateOperations::Report(ReportMessage { conn_id }))
+            .unwrap();
+    }
+}
 
 pub enum BlockStateOperations {
     Report(ReportMessage),

@@ -1,5 +1,5 @@
 use super::services::messenger::Messenger;
-use super::services::packet_processor::{InboundPacketMessage, PacketProcessorOperations};
+use super::services::packet_processor::PacketProcessor;
 
 use super::models::minecraft_protocol::MinecraftProtocolReader;
 
@@ -7,13 +7,15 @@ use std::env;
 use std::io::ErrorKind::UnexpectedEof;
 use std::io::{Cursor, Error, Read};
 use std::net::{TcpListener, TcpStream};
-use std::sync::mpsc::Sender;
 use std::thread;
 
 use uuid::Uuid;
 
-pub fn listen<M: 'static + Messenger + Clone + Send>(
-    inbound_packet_processor: Sender<PacketProcessorOperations>,
+pub fn listen<
+    M: 'static + Messenger + Clone + Send,
+    PP: 'static + PacketProcessor + Clone + Send,
+>(
+    inbound_packet_processor: PP,
     messenger: M,
 ) {
     let connection_string = format!("127.0.0.1:{}", env::var("PORT").unwrap());
@@ -37,9 +39,9 @@ pub fn listen<M: 'static + Messenger + Clone + Send>(
     }
 }
 
-pub fn handle_connection<M: Messenger>(
+pub fn handle_connection<M: Messenger, PP: PacketProcessor>(
     mut stream: TcpStream,
-    inbound_packet_processor: Sender<PacketProcessorOperations>,
+    inbound_packet_processor: PP,
     messenger: M,
     conn_id: Uuid,
 ) {
@@ -56,12 +58,7 @@ pub fn handle_connection<M: Messenger>(
                     })
                     .collect();
                 let cursor = Cursor::new(vec);
-                inbound_packet_processor
-                    .send(PacketProcessorOperations::Inbound(InboundPacketMessage {
-                        conn_id,
-                        cursor,
-                    }))
-                    .expect("Inbound packet processor crashed");
+                inbound_packet_processor.inbound(conn_id, cursor);
             }
             Err(e) => {
                 match e.kind() {

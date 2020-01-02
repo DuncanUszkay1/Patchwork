@@ -1,6 +1,6 @@
-use super::game_state::block::BlockStateOperations;
-use super::game_state::patchwork::PatchworkStateOperations;
-use super::game_state::player::PlayerStateOperations;
+use super::game_state::block::BlockState;
+use super::game_state::patchwork::PatchworkState;
+use super::game_state::player::PlayerState;
 use super::messenger::Messenger;
 use super::packet::{read, translate};
 use super::packet_router;
@@ -9,6 +9,27 @@ use std::collections::HashMap;
 use std::io::Cursor;
 use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
+
+pub trait PacketProcessor {
+    fn inbound(&self, conn_id: Uuid, cursor: Cursor<Vec<u8>>);
+    fn set_translation_data(&self, conn_id: Uuid, updates: Vec<TranslationUpdates>);
+}
+
+impl PacketProcessor for Sender<PacketProcessorOperations> {
+    fn inbound(&self, conn_id: Uuid, cursor: Cursor<Vec<u8>>) {
+        self.send(PacketProcessorOperations::Inbound(InboundPacketMessage {
+            conn_id,
+            cursor,
+        }))
+        .unwrap()
+    }
+    fn set_translation_data(&self, conn_id: Uuid, updates: Vec<TranslationUpdates>) {
+        self.send(PacketProcessorOperations::SetTranslationData(
+            TranslationDataMessage { conn_id, updates },
+        ))
+        .unwrap();
+    }
+}
 
 pub enum PacketProcessorOperations {
     Inbound(InboundPacketMessage),
@@ -27,12 +48,17 @@ pub struct TranslationDataMessage {
     pub updates: Vec<TranslationUpdates>,
 }
 
-pub fn start_inbound<M: Messenger + Clone>(
+pub fn start_inbound<
+    M: Messenger + Clone,
+    P: PlayerState + Clone,
+    PA: PatchworkState + Clone,
+    B: BlockState + Clone,
+>(
     receiver: Receiver<PacketProcessorOperations>,
     messenger: M,
-    player_state: Sender<PlayerStateOperations>,
-    block_state: Sender<BlockStateOperations>,
-    patchwork_state: Sender<PatchworkStateOperations>,
+    player_state: P,
+    block_state: B,
+    patchwork_state: PA,
 ) {
     let mut translation_data = HashMap::<Uuid, TranslationInfo>::new();
 

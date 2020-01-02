@@ -1,22 +1,24 @@
-use super::game_state::block;
-use super::game_state::block::BlockStateOperations;
-use super::game_state::patchwork::PatchworkStateOperations;
-use super::game_state::player;
-use super::game_state::player::{Angle, NewPlayerMessage, Player, PlayerStateOperations, Position};
+use super::game_state::block::BlockState;
+use super::game_state::patchwork::PatchworkState;
+use super::game_state::player::{Angle, Player, PlayerState, Position};
 use super::messenger::{Messenger, SubscriberType};
 use super::packet;
 use super::packet::Packet;
 use super::translation::TranslationUpdates;
-use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-pub fn handle_login_packet<M: Messenger + Clone>(
+pub fn handle_login_packet<
+    M: Messenger + Clone,
+    P: PlayerState + Clone,
+    PA: PatchworkState + Clone,
+    B: BlockState + Clone,
+>(
     p: Packet,
     conn_id: Uuid,
     messenger: M,
-    player_state: Sender<PlayerStateOperations>,
-    block_state: Sender<BlockStateOperations>,
-    patchwork_state: Sender<PatchworkStateOperations>,
+    player_state: P,
+    block_state: B,
+    patchwork_state: PA,
 ) -> TranslationUpdates {
     match p.clone() {
         Packet::LoginStart(login_start) => {
@@ -36,13 +38,18 @@ pub fn handle_login_packet<M: Messenger + Clone>(
     }
 }
 
-fn confirm_login<M: Messenger + Clone>(
+fn confirm_login<
+    M: Messenger + Clone,
+    P: PlayerState + Clone,
+    PA: PatchworkState + Clone,
+    B: BlockState + Clone,
+>(
     conn_id: Uuid,
     messenger: M,
     login_start: packet::LoginStart,
-    player_state: Sender<PlayerStateOperations>,
-    block_state: Sender<BlockStateOperations>,
-    patchwork_state: Sender<PatchworkStateOperations>,
+    player_state: P,
+    block_state: B,
+    patchwork_state: PA,
 ) {
     let player = Player {
         conn_id,
@@ -64,30 +71,11 @@ fn confirm_login<M: Messenger + Clone>(
     login_success(conn_id, messenger.clone(), player.clone());
 
     //update the gamestate with this new player
-    player_state
-        .send(PlayerStateOperations::New(NewPlayerMessage {
-            conn_id,
-            player,
-        }))
-        .unwrap();
-
-    block_state
-        .send(BlockStateOperations::Report(block::ReportMessage {
-            conn_id,
-        }))
-        .unwrap();
-
+    player_state.new_player(conn_id, player);
+    block_state.report(conn_id);
     messenger.subscribe(conn_id, SubscriberType::All);
-
-    player_state
-        .send(PlayerStateOperations::Report(player::ReportMessage {
-            conn_id,
-        }))
-        .unwrap();
-
-    patchwork_state
-        .send(PatchworkStateOperations::Report)
-        .unwrap();
+    player_state.report(conn_id);
+    patchwork_state.report();
 }
 
 fn login_success<M: Messenger>(conn_id: Uuid, messenger: M, player: Player) {

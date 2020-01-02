@@ -1,6 +1,6 @@
 use super::interfaces::messenger::Messenger;
+use super::interfaces::packet_processor::PacketProcessor;
 use super::packet::{Handshake, Packet};
-use super::packet_processor::PacketProcessor;
 use super::server;
 use super::translation::TranslationUpdates;
 use std::io;

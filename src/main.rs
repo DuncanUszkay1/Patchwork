@@ -5,7 +5,7 @@ mod models;
 mod packet_handlers;
 mod server;
 
-use services::game_state::patchwork::PatchworkState;
+use interfaces::patchwork::PatchworkState;
 
 use services::instance::ServiceInstance;
 

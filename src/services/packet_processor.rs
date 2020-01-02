@@ -5,7 +5,7 @@ use super::interfaces::patchwork::PatchworkState;
 use super::interfaces::player::PlayerState;
 
 use super::packet::{read, translate};
-use super::packet_router;
+use super::packet_handlers::packet_router;
 use super::translation::{TranslationInfo, TranslationUpdates};
 use std::collections::HashMap;
 

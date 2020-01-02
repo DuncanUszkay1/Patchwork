@@ -1,4 +1,3 @@
-use super::gameplay_router;
 use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
 use super::interfaces::patchwork::PatchworkStateOperations;
@@ -6,15 +5,14 @@ use super::interfaces::player::PlayerState;
 use super::map::{Map, Peer, Position};
 use super::packet;
 use super::packet::Packet;
+use super::packet_handlers::gameplay_router;
 use super::server;
+
 use std::collections::HashMap;
 use std::io;
 use std::sync::mpsc::Receiver;
 
 use uuid::Uuid;
-
-pub const ENTITY_ID_BLOCK_SIZE: i32 = 1000;
-pub const CHUNK_SIZE: i32 = 16;
 
 pub fn start<
     M: 'static + Messenger + Clone + Send,

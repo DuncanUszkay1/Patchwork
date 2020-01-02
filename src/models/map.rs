@@ -1,4 +1,4 @@
-use super::messenger::Messenger;
+use super::interfaces::messenger::Messenger;
 use super::packet::{Handshake, Packet};
 use super::packet_processor::PacketProcessor;
 use super::server;

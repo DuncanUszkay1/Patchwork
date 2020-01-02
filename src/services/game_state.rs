@@ -2,8 +2,8 @@ pub mod block;
 pub mod patchwork;
 pub mod player;
 
+use super::interfaces;
 use super::map;
-use super::messenger;
 use super::minecraft_types;
 use super::packet;
 use super::packet_handlers::gameplay_router;

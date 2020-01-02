@@ -1,4 +1,4 @@
-use super::messenger::Messenger;
+use super::interfaces::messenger::Messenger;
 use super::minecraft_types::float_to_angle;
 use super::packet::{
     ClientboundPlayerPositionAndLook, EntityHeadLook, EntityLookAndMove, JoinGame, Packet,

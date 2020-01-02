@@ -1,4 +1,4 @@
-use super::services::messenger::Messenger;
+use super::interfaces::messenger::Messenger;
 use super::services::packet_processor::PacketProcessor;
 
 use super::models::minecraft_protocol::MinecraftProtocolReader;

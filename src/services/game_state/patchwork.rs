@@ -1,6 +1,6 @@
 use super::gameplay_router;
+use super::interfaces::messenger::Messenger;
 use super::map::{Map, Peer, Position};
-use super::messenger::Messenger;
 use super::packet;
 use super::packet::Packet;
 use super::packet_processor::PacketProcessor;

@@ -1,7 +1,7 @@
 use super::game_state::block::BlockState;
 use super::game_state::patchwork::PatchworkState;
 use super::game_state::player::PlayerState;
-use super::messenger::Messenger;
+use super::interfaces::messenger::Messenger;
 use super::packet::{read, translate};
 use super::packet_router;
 use super::translation::{TranslationInfo, TranslationUpdates};

@@ -7,7 +7,7 @@ pub mod packet;
 pub mod translation;
 
 use super::services::game_state;
-use super::services::messenger;
 use super::services::packet_processor;
 
+use super::interfaces;
 use super::server;

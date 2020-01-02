@@ -1,4 +1,4 @@
-use super::messenger::Messenger;
+use super::interfaces::messenger::Messenger;
 use super::packet::{KeepAlive, Packet};
 use std::sync::mpsc::Receiver;
 use std::thread::sleep;

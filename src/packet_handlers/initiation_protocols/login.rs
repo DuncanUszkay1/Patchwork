@@ -1,7 +1,7 @@
 use super::game_state::block::BlockState;
 use super::game_state::patchwork::PatchworkState;
 use super::game_state::player::{Angle, Player, PlayerState, Position};
-use super::messenger::{Messenger, SubscriberType};
+use super::interfaces::messenger::{Messenger, SubscriberType};
 use super::packet;
 use super::packet::Packet;
 use super::translation::TranslationUpdates;

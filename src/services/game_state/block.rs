@@ -1,4 +1,4 @@
-use super::messenger::Messenger;
+use super::interfaces::messenger::Messenger;
 use super::minecraft_types::ChunkSection;
 use super::packet::{ChunkData, Packet};
 

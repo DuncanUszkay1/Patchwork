@@ -16,6 +16,8 @@ use super::models::minecraft_types;
 use super::models::packet;
 use super::models::translation;
 
+use super::interfaces;
+
 use super::packet_handlers;
 
 use super::packet_handlers::packet_router;

@@ -1,4 +1,4 @@
-use super::messenger::{Messenger, SubscriberType};
+use super::interfaces::messenger::{Messenger, SubscriberType};
 use super::packet::Packet;
 use uuid::Uuid;
 

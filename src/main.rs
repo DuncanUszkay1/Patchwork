@@ -1,5 +1,6 @@
 #[macro_use]
 mod services;
+mod interfaces;
 mod models;
 mod packet_handlers;
 mod server;

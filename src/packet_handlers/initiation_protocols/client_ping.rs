@@ -1,4 +1,4 @@
-use super::messenger::Messenger;
+use super::interfaces::messenger::Messenger;
 use super::packet;
 use super::packet::Packet;
 use super::translation::TranslationUpdates;

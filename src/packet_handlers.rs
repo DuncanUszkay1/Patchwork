@@ -10,7 +10,8 @@ pub mod packet_router;
 pub mod peer_subscription;
 
 use super::services::game_state;
-use super::services::messenger;
 
 use super::models::packet;
 use super::models::translation;
+
+use super::interfaces;

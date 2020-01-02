@@ -4,7 +4,7 @@ mod models;
 mod packet_handlers;
 mod server;
 
-use services::game_state::patchwork::{NewMapMessage, PatchworkStateOperations};
+use services::game_state::patchwork::PatchworkState;
 
 use services::instance::ServiceInstance;
 
@@ -76,15 +76,10 @@ fn main() {
     let peer_address = String::from("127.0.0.1");
     let peer_port = env::var("PEER_PORT").unwrap().parse::<u16>().unwrap();
 
-    patchwork_state
-        .sender()
-        .send(PatchworkStateOperations::New(NewMapMessage {
-            peer: models::map::Peer {
-                port: peer_port,
-                address: peer_address,
-            },
-        }))
-        .unwrap();
+    patchwork_state.sender().new_map(models::map::Peer {
+        port: peer_port,
+        address: peer_address,
+    });
 
     server::listen(inbound_packet_processor.sender(), messenger.sender());
 }

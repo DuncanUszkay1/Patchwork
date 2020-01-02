@@ -1,10 +1,9 @@
 use super::messenger::Messenger;
 use super::packet::{Handshake, Packet};
-use super::packet_processor::{PacketProcessorOperations, TranslationDataMessage};
+use super::packet_processor::PacketProcessor;
 use super::server;
 use super::translation::TranslationUpdates;
 use std::io;
-use std::sync::mpsc::Sender;
 use std::thread;
 use uuid::Uuid;
 
@@ -56,27 +55,26 @@ impl Map {
         }
     }
 
-    pub fn connect<M: 'static + Messenger + Clone + Send>(
+    pub fn connect<
+        M: 'static + Messenger + Clone + Send,
+        PP: 'static + PacketProcessor + Clone + Send,
+    >(
         &self,
         messenger: M,
-        inbound_packet_processor: Sender<PacketProcessorOperations>,
+        inbound_packet_processor: PP,
         peer: Peer,
     ) -> Result<Map, io::Error> {
         let conn_id = Uuid::new_v4();
         let stream = server::new_connection(peer.address.clone(), peer.port)?;
         messenger.new_connection(conn_id, stream.try_clone().unwrap());
-        inbound_packet_processor
-            .send(PacketProcessorOperations::SetTranslationData(
-                TranslationDataMessage {
-                    conn_id,
-                    updates: vec![
-                        TranslationUpdates::State(5),
-                        TranslationUpdates::EntityIdBlock(self.entity_id_block),
-                        TranslationUpdates::XOrigin(self.position.x),
-                    ],
-                },
-            ))
-            .unwrap();
+        inbound_packet_processor.set_translation_data(
+            conn_id,
+            vec![
+                TranslationUpdates::State(5),
+                TranslationUpdates::EntityIdBlock(self.entity_id_block),
+                TranslationUpdates::XOrigin(self.position.x),
+            ],
+        );
 
         let messenger_clone = messenger.clone();
         let inbound_packet_processor_clone = inbound_packet_processor.clone();

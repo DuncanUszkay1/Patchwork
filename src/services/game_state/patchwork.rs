@@ -3,8 +3,8 @@ use super::map::{Map, Peer, Position};
 use super::messenger::Messenger;
 use super::packet;
 use super::packet::Packet;
-use super::packet_processor::PacketProcessorOperations;
-use super::player::{CrossBorderMessage, PlayerStateOperations};
+use super::packet_processor::PacketProcessor;
+use super::player::PlayerState;
 use super::server;
 use std::collections::HashMap;
 use std::io;
@@ -14,6 +14,31 @@ use uuid::Uuid;
 
 pub const ENTITY_ID_BLOCK_SIZE: i32 = 1000;
 pub const CHUNK_SIZE: i32 = 16;
+
+pub trait PatchworkState {
+    fn new_map(&self, peer: Peer);
+    fn route_player_packet(&self, packet: Packet, conn_id: Uuid);
+    fn report(&self);
+}
+
+impl PatchworkState for Sender<PatchworkStateOperations> {
+    fn new_map(&self, peer: Peer) {
+        self.send(PatchworkStateOperations::New(NewMapMessage { peer }))
+            .unwrap();
+    }
+
+    fn route_player_packet(&self, packet: Packet, conn_id: Uuid) {
+        self.send(PatchworkStateOperations::RoutePlayerPacket(RouteMessage {
+            packet,
+            conn_id,
+        }))
+        .unwrap();
+    }
+
+    fn report(&self) {
+        self.send(PatchworkStateOperations::Report).unwrap();
+    }
+}
 
 pub enum PatchworkStateOperations {
     New(NewMapMessage),
@@ -32,11 +57,15 @@ pub struct RouteMessage {
     pub conn_id: Uuid,
 }
 
-pub fn start<M: 'static + Messenger + Clone + Send>(
+pub fn start<
+    M: 'static + Messenger + Clone + Send,
+    P: PlayerState + Clone,
+    PP: 'static + PacketProcessor + Clone + Send,
+>(
     receiver: Receiver<PatchworkStateOperations>,
     messenger: M,
-    inbound_packet_processor: Sender<PacketProcessorOperations>,
-    player_state: Sender<PlayerStateOperations>,
+    inbound_packet_processor: PP,
+    player_state: P,
 ) {
     let mut patchwork = Patchwork::new();
 
@@ -129,13 +158,13 @@ struct Anchor {
 }
 
 impl Anchor {
-    pub fn connect<M: Messenger>(
+    pub fn connect<M: Messenger, P: PlayerState>(
         peer: Peer,
         local_conn_id: Uuid,
         map_index: usize,
         x_origin: i32,
         messenger: M,
-        player_state: Sender<PlayerStateOperations>,
+        player_state: P,
     ) -> Result<Anchor, io::Error> {
         let conn_id = Uuid::new_v4();
         let stream = server::new_connection(peer.address.clone(), peer.port)?;
@@ -150,12 +179,7 @@ impl Anchor {
                 next_state: 4,
             }),
         );
-        player_state
-            .send(PlayerStateOperations::CrossBorder(CrossBorderMessage {
-                local_conn_id,
-                remote_conn_id: conn_id,
-            }))
-            .unwrap();
+        player_state.cross_border(local_conn_id, conn_id);
         Ok(Anchor {
             map_index,
             conn_id: Some(conn_id),
@@ -191,11 +215,14 @@ impl Patchwork {
             .expect("Could not find map for position")
     }
 
-    pub fn add_peer_map<M: 'static + Messenger + Send + Clone>(
+    pub fn add_peer_map<
+        M: 'static + Messenger + Send + Clone,
+        PP: 'static + PacketProcessor + Send + Clone,
+    >(
         &mut self,
         peer: Peer,
         messenger: M,
-        inbound_packet_processor: Sender<PacketProcessorOperations>,
+        inbound_packet_processor: PP,
     ) {
         if let Ok(map) = Map::new(self.next_position(), self.next_entity_id_block()).connect(
             messenger,

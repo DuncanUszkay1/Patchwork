@@ -54,6 +54,9 @@ fn handle_message<M: Messenger>(
             entity_conn_ids.insert(player.entity_id, msg.conn_id);
             players.insert(msg.conn_id, player);
         }
+        PlayerStateOperations::Delete(msg) => {
+            players.remove(&msg.conn_id);
+        }
         PlayerStateOperations::MoveAndLook(msg) => {
             trace!(
                 "Player Move/Look new_position: {:?} new_angle: {:?} for conn_id {:?}",

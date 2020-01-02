@@ -1,3 +1,4 @@
+use super::interfaces::connection::ConnectionService;
 use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
 
@@ -14,8 +15,10 @@ use uuid::Uuid;
 pub fn listen<
     M: 'static + Messenger + Clone + Send,
     PP: 'static + PacketProcessor + Clone + Send,
+    CS: 'static + ConnectionService + Clone + Send,
 >(
     inbound_packet_processor: PP,
+    connection_service: CS,
     messenger: M,
 ) {
     let connection_string = format!("127.0.0.1:{}", env::var("PORT").unwrap());
@@ -27,6 +30,7 @@ pub fn listen<
         let stream = stream.unwrap();
         let inbound_packet_processor_clone = inbound_packet_processor.clone();
         let messenger_clone = messenger.clone();
+        let closure_connection_service = connection_service.clone();
         let conn_id = Uuid::new_v4();
         thread::spawn(move || {
             handle_connection(
@@ -34,16 +38,18 @@ pub fn listen<
                 inbound_packet_processor_clone,
                 messenger_clone,
                 conn_id,
+                || closure_connection_service.close(conn_id),
             );
         });
     }
 }
 
-pub fn handle_connection<M: Messenger, PP: PacketProcessor>(
+pub fn handle_connection<M: Messenger, PP: PacketProcessor, F: Fn()>(
     mut stream: TcpStream,
     inbound_packet_processor: PP,
     messenger: M,
     conn_id: Uuid,
+    on_closure: F,
 ) {
     let stream_clone = stream.try_clone().unwrap();
     messenger.new_connection(conn_id, stream_clone);
@@ -62,7 +68,7 @@ pub fn handle_connection<M: Messenger, PP: PacketProcessor>(
             }
             Err(e) => {
                 match e.kind() {
-                    UnexpectedEof => {}
+                    UnexpectedEof => on_closure(),
                     _ => {
                         panic!("conn closed due to {:?}", e);
                     }

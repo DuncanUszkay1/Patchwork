@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 pub trait PlayerState {
     fn new_player(&self, conn_id: Uuid, player: Player);
+    fn delete_player(&self, conn_id: Uuid);
     fn report(&self, conn_id: Uuid);
     fn move_and_look(
         &self,
@@ -20,6 +21,12 @@ impl PlayerState for Sender<PlayerStateOperations> {
         self.send(PlayerStateOperations::New(NewPlayerMessage {
             conn_id,
             player,
+        }))
+        .unwrap();
+    }
+    fn delete_player(&self, conn_id: Uuid) {
+        self.send(PlayerStateOperations::Delete(DeletePlayerMessage {
+            conn_id,
         }))
         .unwrap();
     }
@@ -59,6 +66,7 @@ impl PlayerState for Sender<PlayerStateOperations> {
 
 pub enum PlayerStateOperations {
     New(NewPlayerMessage),
+    Delete(DeletePlayerMessage),
     Report(ReportMessage),
     MoveAndLook(PlayerMoveAndLookMessage),
     CrossBorder(CrossBorderMessage),
@@ -98,6 +106,11 @@ pub struct BroadcastAnchoredEventMessage {
 pub struct NewPlayerMessage {
     pub conn_id: Uuid,
     pub player: Player,
+}
+
+#[derive(Debug)]
+pub struct DeletePlayerMessage {
+    pub conn_id: Uuid,
 }
 
 #[derive(Debug)]

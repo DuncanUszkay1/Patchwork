@@ -1,4 +1,5 @@
 pub mod block;
+pub mod connection;
 pub mod messenger;
 pub mod packet_processor;
 pub mod patchwork;

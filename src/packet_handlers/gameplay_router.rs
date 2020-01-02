@@ -1,4 +1,4 @@
-use super::game_state::player::{Angle, PlayerState, Position};
+use super::interfaces::player::{Angle, PlayerState, Position};
 use super::packet::Packet;
 use uuid::Uuid;
 

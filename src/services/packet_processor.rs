@@ -1,52 +1,16 @@
-use super::game_state::block::BlockState;
-use super::game_state::patchwork::PatchworkState;
-use super::game_state::player::PlayerState;
+use super::interfaces::block::BlockState;
 use super::interfaces::messenger::Messenger;
+use super::interfaces::packet_processor::PacketProcessorOperations;
+use super::interfaces::patchwork::PatchworkState;
+use super::interfaces::player::PlayerState;
+
 use super::packet::{read, translate};
 use super::packet_router;
 use super::translation::{TranslationInfo, TranslationUpdates};
 use std::collections::HashMap;
-use std::io::Cursor;
-use std::sync::mpsc::{Receiver, Sender};
+
+use std::sync::mpsc::Receiver;
 use uuid::Uuid;
-
-pub trait PacketProcessor {
-    fn inbound(&self, conn_id: Uuid, cursor: Cursor<Vec<u8>>);
-    fn set_translation_data(&self, conn_id: Uuid, updates: Vec<TranslationUpdates>);
-}
-
-impl PacketProcessor for Sender<PacketProcessorOperations> {
-    fn inbound(&self, conn_id: Uuid, cursor: Cursor<Vec<u8>>) {
-        self.send(PacketProcessorOperations::Inbound(InboundPacketMessage {
-            conn_id,
-            cursor,
-        }))
-        .unwrap()
-    }
-    fn set_translation_data(&self, conn_id: Uuid, updates: Vec<TranslationUpdates>) {
-        self.send(PacketProcessorOperations::SetTranslationData(
-            TranslationDataMessage { conn_id, updates },
-        ))
-        .unwrap();
-    }
-}
-
-pub enum PacketProcessorOperations {
-    Inbound(InboundPacketMessage),
-    SetTranslationData(TranslationDataMessage),
-}
-
-#[derive(Debug)]
-pub struct InboundPacketMessage {
-    pub conn_id: Uuid,
-    pub cursor: Cursor<Vec<u8>>,
-}
-
-#[derive(Debug)]
-pub struct TranslationDataMessage {
-    pub conn_id: Uuid,
-    pub updates: Vec<TranslationUpdates>,
-}
 
 pub fn start_inbound<
     M: Messenger + Clone,

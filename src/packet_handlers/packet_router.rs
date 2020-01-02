@@ -1,8 +1,9 @@
-use super::game_state::block::BlockState;
-use super::game_state::patchwork::PatchworkState;
-use super::game_state::player::PlayerState;
-use super::initiation_protocols::{border_cross_login, client_ping, handshake, login};
+use super::interfaces::block::BlockState;
 use super::interfaces::messenger::Messenger;
+use super::interfaces::patchwork::PatchworkState;
+use super::interfaces::player::PlayerState;
+
+use super::initiation_protocols::{border_cross_login, client_ping, handshake, login};
 use super::packet::Packet;
 use super::peer_subscription;
 use super::translation::TranslationUpdates;

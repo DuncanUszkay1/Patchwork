@@ -2,8 +2,8 @@ use super::interfaces::messenger::{Messenger, SubscriberType};
 use super::packet::Packet;
 use uuid::Uuid;
 
-use super::game_state::block::BlockState;
-use super::game_state::player::PlayerState;
+use super::interfaces::block::BlockState;
+use super::interfaces::player::PlayerState;
 
 pub fn handle_peer_packet<M: Messenger, P: PlayerState>(
     packet: Packet,

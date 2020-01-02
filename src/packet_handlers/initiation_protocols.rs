@@ -10,7 +10,6 @@ pub mod client_ping;
 pub mod handshake;
 pub mod login;
 
-use super::game_state;
 use super::interfaces;
 use super::packet;
 use super::translation;

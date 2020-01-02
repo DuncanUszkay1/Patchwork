@@ -82,6 +82,13 @@ pub fn start(receiver: Receiver<MessengerOperations>) {
                     }
                 }
             }
+            MessengerOperations::Close(msg) => {
+                trace!("Closing connection {:?}", msg.conn_id);
+                connection_map.remove(&msg.conn_id);
+                translation_data.remove(&msg.conn_id);
+                local_only_broadcast_list.remove(&msg.conn_id);
+                all_broadcast_list.remove(&msg.conn_id);
+            }
             MessengerOperations::New(msg) => {
                 trace!(
                     "New Connection with conn_id {:?} on socket {:?}",

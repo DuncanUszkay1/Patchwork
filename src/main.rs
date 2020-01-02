@@ -66,6 +66,11 @@ fn main() {
             dependencies: [messenger, player_state, block_state, patchwork_state]
         ),
         (
+            module: services::connection::start,
+            name: connection_service,
+            dependencies: [messenger, player_state, patchwork_state, inbound_packet_processor]
+        ),
+        (
             module: services::keep_alive::start,
             name: keep_alive,
             dependencies: [messenger]
@@ -83,5 +88,9 @@ fn main() {
         address: peer_address,
     });
 
-    server::listen(inbound_packet_processor.sender(), messenger.sender());
+    server::listen(
+        inbound_packet_processor.sender(),
+        connection_service.sender(),
+        messenger.sender(),
+    );
 }

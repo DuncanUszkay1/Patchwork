@@ -8,6 +8,7 @@ pub mod instance;
 #[macro_use]
 pub mod messenger;
 pub mod block;
+pub mod connection;
 pub mod keep_alive;
 pub mod packet_processor;
 pub mod patchwork;

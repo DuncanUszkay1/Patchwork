@@ -10,6 +10,7 @@ pub trait Messenger {
     fn subscribe(&self, conn_id: Uuid, typ: SubscriberType);
     fn new_connection(&self, conn_id: Uuid, socket: TcpStream);
     fn update_translation(&self, conn_id: Uuid, map: Map);
+    fn close(&self, conn_id: Uuid);
 }
 
 impl Messenger for Sender<MessengerOperations> {
@@ -38,6 +39,11 @@ impl Messenger for Sender<MessengerOperations> {
         .unwrap();
     }
 
+    fn close(&self, conn_id: Uuid) {
+        self.send(MessengerOperations::Close(CloseMessage { conn_id }))
+            .unwrap();
+    }
+
     fn new_connection(&self, conn_id: Uuid, socket: TcpStream) {
         self.send(MessengerOperations::New(NewConnectionMessage {
             conn_id,
@@ -58,6 +64,7 @@ pub enum MessengerOperations {
     Send(SendPacketMessage),
     Broadcast(BroadcastPacketMessage),
     Subscribe(SubscribeMessage),
+    Close(CloseMessage),
     New(NewConnectionMessage),
     UpdateTranslation(UpdateTranslationMessage),
 }
@@ -78,6 +85,11 @@ pub struct UpdateTranslationMessage {
 pub struct SubscribeMessage {
     pub conn_id: Uuid,
     pub typ: SubscriberType,
+}
+
+#[derive(Debug)]
+pub struct CloseMessage {
+    pub conn_id: Uuid,
 }
 
 #[derive(Debug)]

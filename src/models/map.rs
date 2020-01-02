@@ -84,6 +84,7 @@ impl Map {
                 inbound_packet_processor_clone,
                 messenger_clone,
                 conn_id,
+                || {},
             );
         });
         let map = Map {

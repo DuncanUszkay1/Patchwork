@@ -68,7 +68,9 @@ macro_rules! packet_boilerplate {
             byte_vec.extend(size_vec);
 
             //Send the packet
-            stream.write_all(&byte_vec).unwrap();
+            stream.write_all(&byte_vec).unwrap_or_else(|e| {
+                warn!("Failed to write packet: {:?}", e);
+            });
         }
 
         pub fn translate(packet: Packet, translation_info: TranslationInfo) -> Packet {

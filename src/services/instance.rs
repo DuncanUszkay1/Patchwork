@@ -37,8 +37,9 @@ macro_rules! define_services {
         $(
             paste::expr! {
                 $(let [<$dependency _clone>] = $dependency.sender(););*
+                let sender = $service_instance.sender();
                 let receiver = $service_instance.receiver();
-                thread::spawn(move || $service(receiver, $({[<$dependency _clone>]}),*));
+                thread::spawn(move || $service(receiver, sender, $({[<$dependency _clone>]}),*));
             }
         )*
     )

@@ -3,7 +3,7 @@ use super::interfaces::messenger::Messenger;
 use super::minecraft_types::ChunkSection;
 use super::packet::{ChunkData, Packet};
 
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 
 // We don't really have any meaningful block state yet- it cannot be changed or be particularly
 // complicated. We can build this up later
@@ -24,7 +24,11 @@ fn fill_dummy_block_ids(ids: &mut Vec<i32>) {
     }
 }
 
-pub fn start<M: Messenger>(receiver: Receiver<BlockStateOperations>, messenger: M) {
+pub fn start<M: Messenger>(
+    receiver: Receiver<BlockStateOperations>,
+    _sender: Sender<BlockStateOperations>,
+    messenger: M,
+) {
     while let Ok(msg) = receiver.recv() {
         match msg {
             BlockStateOperations::Report(msg) => {

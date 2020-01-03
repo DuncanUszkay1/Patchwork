@@ -6,16 +6,27 @@ use super::packet::{
     PlayerInfo, PlayerPositionAndLook, SpawnPlayer,
 };
 use std::collections::HashMap;
-use std::convert::TryInto;
-use std::sync::mpsc::Receiver;
+
+use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
-pub fn start<M: Messenger + Clone>(receiver: Receiver<PlayerStateOperations>, messenger: M) {
+pub fn start<M: Messenger + Clone>(
+    receiver: Receiver<PlayerStateOperations>,
+    _sender: Sender<PlayerStateOperations>,
+    messenger: M,
+) {
     let mut players = HashMap::<Uuid, Player>::new();
     let mut entity_conn_ids = HashMap::<i32, Uuid>::new();
+    let mut entity_id = 0;
 
     while let Ok(msg) = receiver.recv() {
-        handle_message(msg, &mut players, &mut entity_conn_ids, messenger.clone())
+        handle_message(
+            msg,
+            &mut players,
+            &mut entity_conn_ids,
+            &mut entity_id,
+            messenger.clone(),
+        )
     }
 }
 
@@ -23,13 +34,15 @@ fn handle_message<M: Messenger>(
     msg: PlayerStateOperations,
     players: &mut HashMap<Uuid, Player>,
     entity_conn_ids: &mut HashMap<i32, Uuid>,
+    entity_id: &mut i32,
     messenger: M,
 ) {
     match msg {
         PlayerStateOperations::New(msg) => {
             let mut player = msg.player;
             if player.entity_id == 0 {
-                player.entity_id = players.len().try_into().expect("too many players");
+                player.entity_id = *entity_id;
+                *entity_id += 1;
             }
             trace!(
                 "Creating new player {:?} for conn_id {:?}",
@@ -92,11 +105,13 @@ fn handle_message<M: Messenger>(
         //When we get a message from a peer that comes from one of our anchored players we want to
         //make sure they don't get the result packets.
         PlayerStateOperations::BroadcastAnchoredEvent(msg) => {
-            trace!("Broadcasting Anchored Event for entity {:?}", msg.entity_id);
+            if let Some(entity_id) = entity_conn_ids.get(&msg.entity_id) {
+                trace!("Appending entity id {:?} to anchored event", entity_id);
+            }
             messenger.broadcast_packet(
                 msg.packet,
                 entity_conn_ids.get(&msg.entity_id).copied(),
-                true,
+                false,
             );
         }
         PlayerStateOperations::CrossBorder(msg) => {

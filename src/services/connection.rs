@@ -4,7 +4,7 @@ use super::interfaces::packet_processor::PacketProcessor;
 use super::interfaces::patchwork::PatchworkState;
 use super::interfaces::player::PlayerState;
 
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 
 pub fn start<
     M: Messenger + Clone,
@@ -13,6 +13,7 @@ pub fn start<
     PP: 'static + PacketProcessor + Clone + Send,
 >(
     receiver: Receiver<ConnectionOperations>,
+    _sender: Sender<ConnectionOperations>,
     messenger: M,
     player_state: P,
     _patchwork_state: PA,

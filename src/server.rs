@@ -9,6 +9,8 @@ use std::io::ErrorKind::UnexpectedEof;
 use std::io::{Cursor, Error, Read};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
+use std::thread::sleep;
+use std::time;
 
 use uuid::Uuid;
 
@@ -75,6 +77,27 @@ pub fn handle_connection<M: Messenger, PP: PacketProcessor, F: Fn()>(
                 };
                 break;
             }
+        }
+    }
+}
+
+//Just doing a simple linear backoff for now, probably want something a little more sophisticated
+//eventually
+pub fn wait_for_connection<F: FnOnce(TcpStream)>(
+    peer_address: String,
+    peer_port: u16,
+    on_connection: F,
+) {
+    let backoff = 1;
+    loop {
+        if let Ok(connection) = new_connection(peer_address.clone(), peer_port) {
+            trace!("Connection Established");
+            on_connection(connection);
+            break;
+        } else {
+            let backoff = if backoff < 10 { backoff + 1 } else { backoff };
+            trace!("Failed to connect- retrying in {:?}s", backoff);
+            sleep(time::Duration::from_secs(backoff));
         }
     }
 }

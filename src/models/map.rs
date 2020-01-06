@@ -1,9 +1,11 @@
 use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
+use super::interfaces::patchwork::PatchworkState;
 use super::packet::{Handshake, Packet};
 use super::server;
 use super::translation::TranslationUpdates;
-use std::io;
+
+use std::net::TcpStream;
 use std::thread;
 use uuid::Uuid;
 
@@ -35,6 +37,7 @@ pub struct Position {
 impl Map {
     pub fn report<M: Messenger>(&self, messenger: M) {
         if let Some(peer_connection) = &self.peer_connection {
+            trace!("Reporting map {:?}", self);
             messenger.send_packet(
                 peer_connection.conn_id,
                 Packet::Handshake(Handshake {
@@ -58,63 +61,56 @@ impl Map {
     pub fn connect<
         M: 'static + Messenger + Clone + Send,
         PP: 'static + PacketProcessor + Clone + Send,
+        PA: 'static + PatchworkState + Clone + Send,
     >(
         &self,
         messenger: M,
         inbound_packet_processor: PP,
         peer: Peer,
-    ) -> Result<Map, io::Error> {
+        patchwork_state: PA,
+        map_index: usize,
+    ) {
         let conn_id = Uuid::new_v4();
-        let stream = server::new_connection(peer.address.clone(), peer.port)?;
-        messenger.new_connection(conn_id, stream.try_clone().unwrap());
-        inbound_packet_processor.set_translation_data(
-            conn_id,
-            vec![
-                TranslationUpdates::State(5),
-                TranslationUpdates::EntityIdBlock(self.entity_id_block),
-                TranslationUpdates::XOrigin(self.position.x),
-            ],
-        );
+        let translation_updates = vec![
+            TranslationUpdates::State(5),
+            TranslationUpdates::EntityIdBlock(self.entity_id_block),
+            TranslationUpdates::XOrigin(self.position.x),
+        ];
+        let peer_clone = peer.clone();
+        let on_connection = move |stream: TcpStream| {
+            messenger.new_connection(conn_id, stream.try_clone().unwrap());
+            inbound_packet_processor.set_translation_data(conn_id, translation_updates);
 
-        let messenger_clone = messenger.clone();
-        let inbound_packet_processor_clone = inbound_packet_processor.clone();
-        thread::spawn(move || {
-            server::handle_connection(
-                stream.try_clone().unwrap(),
-                inbound_packet_processor_clone,
-                messenger_clone,
+            let messenger_clone = messenger.clone();
+            let inbound_packet_processor_clone = inbound_packet_processor.clone();
+            thread::spawn(move || {
+                server::handle_connection(
+                    stream.try_clone().unwrap(),
+                    inbound_packet_processor_clone,
+                    messenger_clone,
+                    conn_id,
+                    || {},
+                );
+            });
+            messenger.send_packet(
                 conn_id,
-                || {},
+                Packet::Handshake(Handshake {
+                    protocol_version: 404,
+                    server_address: String::from(""),
+                    server_port: 0,
+                    next_state: 6,
+                }),
             );
-        });
-        let map = Map {
-            peer_connection: Some(PeerConnection { peer, conn_id }),
-            position: self.position,
-            entity_id_block: self.entity_id_block,
+            patchwork_state.connect_map(
+                map_index,
+                PeerConnection {
+                    peer: peer_clone,
+                    conn_id,
+                },
+            );
         };
-        messenger.send_packet(
-            conn_id,
-            Packet::Handshake(Handshake {
-                protocol_version: 404,
-                server_address: String::from(""),
-                server_port: 0,
-                next_state: 6,
-            }),
-        );
-
-        //we send two packets because our protocol requires at least two packets to be sent
-        //before it can do anything- the first is a handshake, then the second one it can
-        //actually response to (it ignores the type of packet, so we just send it random data)
-        //to be changed later with a real request packet
-        messenger.send_packet(
-            conn_id,
-            Packet::Handshake(Handshake {
-                protocol_version: 404,
-                server_address: String::from(""),
-                server_port: 0,
-                next_state: 6,
-            }),
-        );
-        Ok(map)
+        thread::spawn(move || {
+            server::wait_for_connection(peer.address.clone(), peer.port, on_connection);
+        });
     }
 }

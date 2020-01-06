@@ -3,10 +3,10 @@ use super::packet::{translate_outgoing, write};
 use super::translation::TranslationInfo;
 use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
-pub fn start(receiver: Receiver<MessengerOperations>) {
+pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerOperations>) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();
     let mut local_only_broadcast_list = HashSet::<Uuid>::new();
     let mut all_broadcast_list = HashSet::<Uuid>::new();

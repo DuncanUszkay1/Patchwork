@@ -39,6 +39,8 @@ pub fn handle_subscriber_packet<M: Messenger, P: PlayerState, B: BlockState>(
     //Everytime a subscriber sends us a packet, we subscribe them to our messages and report our
     //state to them
 
+    trace!("Reporting state to peer");
+
     messenger.subscribe(conn_id, SubscriberType::LocalOnly);
     player_state.report(conn_id);
     block_state.report(conn_id);

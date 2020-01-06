@@ -2,7 +2,7 @@ use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
 use super::interfaces::patchwork::PatchworkStateOperations;
 use super::interfaces::player::PlayerState;
-use super::map::{Map, Peer, Position};
+use super::map::{Map, Peer, PeerConnection, Position};
 use super::packet;
 use super::packet::Packet;
 use super::packet_handlers::gameplay_router;
@@ -10,7 +10,7 @@ use super::server;
 
 use std::collections::HashMap;
 use std::io;
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 
 use uuid::Uuid;
 
@@ -20,6 +20,7 @@ pub fn start<
     PP: 'static + PacketProcessor + Clone + Send,
 >(
     receiver: Receiver<PatchworkStateOperations>,
+    sender: Sender<PatchworkStateOperations>,
     messenger: M,
     inbound_packet_processor: PP,
     player_state: P,
@@ -34,7 +35,11 @@ pub fn start<
                     msg.peer,
                     messenger.clone(),
                     inbound_packet_processor.clone(),
+                    sender.clone(),
                 )
+            }
+            PatchworkStateOperations::ConnectMap(msg) => {
+                patchwork.connect_map(msg.map_index, msg.peer_connection, messenger.clone());
             }
             PatchworkStateOperations::RoutePlayerPacket(msg) => {
                 let patchwork_clone = patchwork.clone();
@@ -172,6 +177,16 @@ impl Patchwork {
             .expect("Could not find map for position")
     }
 
+    pub fn connect_map<M: Messenger + Clone>(
+        &mut self,
+        map_index: usize,
+        peer_connection: PeerConnection,
+        messenger: M,
+    ) {
+        self.maps[map_index].peer_connection = Some(peer_connection);
+        self.maps[map_index].report(messenger.clone());
+    }
+
     pub fn add_peer_map<
         M: 'static + Messenger + Send + Clone,
         PP: 'static + PacketProcessor + Send + Clone,
@@ -180,14 +195,17 @@ impl Patchwork {
         peer: Peer,
         messenger: M,
         inbound_packet_processor: PP,
+        patchwork_state: Sender<PatchworkStateOperations>,
     ) {
-        if let Ok(map) = Map::new(self.next_position(), self.next_entity_id_block()).connect(
+        let map = Map::new(self.next_position(), self.next_entity_id_block());
+        self.maps.push(map.clone());
+        map.connect(
             messenger,
             inbound_packet_processor,
             peer,
-        ) {
-            self.maps.push(map);
-        }
+            patchwork_state,
+            self.maps.len() - 1,
+        );
     }
 
     pub fn report<M: Messenger + Clone>(self, messenger: M) {

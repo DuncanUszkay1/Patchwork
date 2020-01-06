@@ -9,7 +9,7 @@ use super::packet_handlers::packet_router;
 use super::translation::{TranslationInfo, TranslationUpdates};
 use std::collections::HashMap;
 
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
 pub fn start_inbound<
@@ -19,6 +19,7 @@ pub fn start_inbound<
     B: BlockState + Clone,
 >(
     receiver: Receiver<PacketProcessorOperations>,
+    _sender: Sender<PacketProcessorOperations>,
     messenger: M,
     player_state: P,
     block_state: B,

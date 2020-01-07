@@ -9,15 +9,13 @@ pub fn border_cross_login<P: PlayerState>(
     player_state: P,
 ) -> TranslationUpdates {
     match p {
-        Packet::PlayerPositionAndLook(packet) => {
+        Packet::BorderCrossLogin(packet) => {
             let player = Player {
                 conn_id,
                 uuid: Uuid::new_v4(),
-                name: String::from("ghost"),
-                // hard coded to only work for the first player to login
-                // need to augment this packet to include the entity id on the host peer for this
-                // to work
-                entity_id: 950,
+                name: packet.username,
+                //Hardcoded to assume that 950-1000 is the range used for this peer's anchors
+                entity_id: 950 + packet.entity_id,
                 position: Position {
                     x: packet.x,
                     y: packet.feet_y,

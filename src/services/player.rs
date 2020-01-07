@@ -20,6 +20,7 @@ pub fn start<M: Messenger + Clone>(
     let mut entity_id = 0;
 
     while let Ok(msg) = receiver.recv() {
+        //println!("There are {:?} players on my server", players.len());
         handle_message(
             msg,
             &mut players,

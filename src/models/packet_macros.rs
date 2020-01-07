@@ -1,6 +1,6 @@
 macro_rules! packet_boilerplate {
     ( $( ( $state:pat, $name:ident, $id:expr,
-           [$(($fieldname:ident, $datatype:ident$(($($typearg:tt),*))* $(, $transtype:tt),* ) ),*]
+           [$(($fieldname:ident, $datatype:ident$(($($typearg:tt),*))* $(, $transtype:tt$(($($transarg:tt),*))*),* ) ),*]
     )),*) => (
         //Create an enum with a struct variant for each packet we've defined
         //and a special variant for a packet we haven't defined
@@ -92,12 +92,12 @@ macro_rules! packet_boilerplate {
         }
 
         //Define the packet struct
-        $(packet!{$name, $id, [ $( ( $fieldname, $datatype$(($($typearg),*))* $(, $transtype),* ) ),* ]})*
+        $(packet!{$name, $id, [ $( ( $fieldname, $datatype$(($($typearg),*))* $(, $transtype$(($($transarg),*))*),* ) ),* ]})*
     )
 }
 
 macro_rules! packet {
-    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident$(($($typearg:tt),*))* $(, $transtype:tt),* )),+]) => (
+    ($name:ident, $id:expr, [ $( ($fieldname:ident, $datatype:ident$(($($typearg:tt),*))* $(, $transtype:tt$(($($transarg:tt),*))*),* )),+]) => (
         #[derive(Debug, Clone)]
         pub struct $name { $(pub $fieldname: mc_to_rust_datatype!($datatype$(($($typearg),*))*)),* }
         impl $name {
@@ -113,7 +113,7 @@ macro_rules! packet {
                 $(translated.$fieldname = translate_incoming_packet_field!(
                         self.$fieldname.clone(),
                         translation_data
-                        $(, $transtype ),*
+                        $(, $transtype$(($($transarg),*))*),*
                 ); )*
                 translated
             }
@@ -122,7 +122,7 @@ macro_rules! packet {
                 $(translated.$fieldname = translate_outgoing_packet_field!(
                         self.$fieldname.clone(),
                         translation_data
-                        $(, $transtype ),*
+                        $(, $transtype$(($($transarg),*))* ),*
                 ); )*
                 translated
             }
@@ -310,6 +310,12 @@ macro_rules! translate_incoming_packet_field {
             $value + ($transdata.map.entity_id_block * ENTITY_ID_BLOCK_SIZE)
         }
     }};
+    ($value:expr, $transdata:expr, Array($type:ident)) => {
+        $value
+            .into_iter()
+            .map(|element| translate_incoming_packet_field!(element, $transdata, $type))
+            .collect()
+    };
     ($value:expr, $transdata:expr, XChunk) => {
         $transdata.map.position.x
     };
@@ -330,5 +336,11 @@ macro_rules! translate_outgoing_packet_field {
     };
     ($value:expr, $transdata:expr, XChunk) => {
         $value
+    };
+    ($value:expr, $transdata:expr, Array($type:ident)) => {
+        $value
+            .into_iter()
+            .map(|element| translate_outgoing_packet_field!(element, $transdata, $type))
+            .collect()
     };
 }

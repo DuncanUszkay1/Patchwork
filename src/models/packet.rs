@@ -160,7 +160,7 @@ packet_boilerplate!(
         DestroyEntities,
         0x35,
         [
-            (entity_ids, LengthPrefixedArray(VarInt))
+            (entity_ids, LengthPrefixedArray(VarInt), Array(EntityId))
         ]
     ),
     (

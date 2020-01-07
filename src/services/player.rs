@@ -2,8 +2,8 @@ use super::interfaces::messenger::Messenger;
 use super::interfaces::player::{Angle, Player, PlayerStateOperations, Position};
 use super::minecraft_types::float_to_angle;
 use super::packet::{
-    ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook, EntityLookAndMove, JoinGame,
-    Packet, PlayerInfo, PlayerPositionAndLook, SpawnPlayer,
+    BorderCrossLogin, ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook,
+    EntityLookAndMove, JoinGame, Packet, PlayerInfo, SpawnPlayer,
 };
 use std::collections::HashMap;
 
@@ -20,6 +20,7 @@ pub fn start<M: Messenger + Clone>(
     let mut entity_id = 0;
 
     while let Ok(msg) = receiver.recv() {
+        //println!("There are {:?} players on my server", players.len());
         handle_message(
             msg,
             &mut players,
@@ -129,21 +130,23 @@ fn handle_message<M: Messenger>(
                 .expect("Could not cross border: player not found");
             messenger.send_packet(
                 msg.remote_conn_id,
-                Packet::PlayerPositionAndLook(player.player_position_and_look()),
+                Packet::BorderCrossLogin(player.border_cross_login()),
             );
         }
     }
 }
 
 impl Player {
-    pub fn player_position_and_look(&self) -> PlayerPositionAndLook {
-        PlayerPositionAndLook {
+    pub fn border_cross_login(&self) -> BorderCrossLogin {
+        BorderCrossLogin {
             x: self.position.x,
             feet_y: self.position.y,
             z: self.position.z,
             yaw: self.angle.yaw,
             pitch: self.angle.pitch,
             on_ground: false,
+            username: self.name.clone(),
+            entity_id: self.entity_id,
         }
     }
 

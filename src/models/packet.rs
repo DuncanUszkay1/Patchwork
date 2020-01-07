@@ -60,6 +60,16 @@ packet_boilerplate!(
         ]
     ),
     (6, ReportState, 0x1, []),
+    (_, BorderCrossLogin, 0xA0, [
+            (x, Double, XEntity),
+            (feet_y, Double),
+            (z, Double),
+            (yaw, Float),
+            (pitch, Float),
+            (on_ground, Boolean),
+            (username, String),
+            (entity_id, Int, EntityId)
+    ]),
     (99, Pong, 1, [(payload, Long)]),
     (99, StatusResponse, 0, [(json_response, String)]),
     (99, LoginSuccess, 2, [(uuid, String), (username, String)]),
@@ -150,7 +160,7 @@ packet_boilerplate!(
         DestroyEntities,
         0x35,
         [
-            (entity_ids, LengthPrefixedArray(VarInt))
+            (entity_ids, LengthPrefixedArray(VarInt), Array(EntityId))
         ]
     ),
     (

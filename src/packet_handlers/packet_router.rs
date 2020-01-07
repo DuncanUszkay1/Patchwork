@@ -37,7 +37,7 @@ pub fn route_packet<
         ),
         Status::ClientPing => client_ping::handle_client_ping_packet(packet, conn_id, messenger),
         Status::Play => {
-            patchwork_state.route_player_packet(packet.clone(), conn_id);
+            patchwork_state.route_player_packet(packet, conn_id);
             TranslationUpdates::NoChange
         }
         Status::BorderCrossLogin => {

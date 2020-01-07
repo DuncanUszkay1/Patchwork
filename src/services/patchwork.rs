@@ -184,7 +184,7 @@ impl Patchwork {
         messenger: M,
     ) {
         self.maps[map_index].peer_connection = Some(peer_connection);
-        self.maps[map_index].report(messenger.clone());
+        self.maps[map_index].report(messenger);
     }
 
     pub fn add_peer_map<

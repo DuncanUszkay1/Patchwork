@@ -20,7 +20,7 @@ pub fn handle_login_packet<
     block_state: B,
     patchwork_state: PA,
 ) -> TranslationUpdates {
-    match p.clone() {
+    match p {
         Packet::LoginStart(login_start) => {
             confirm_login(
                 conn_id,

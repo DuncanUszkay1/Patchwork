@@ -2,8 +2,8 @@ use super::interfaces::messenger::Messenger;
 use super::interfaces::player::{Angle, Player, PlayerStateOperations, Position};
 use super::minecraft_types::float_to_angle;
 use super::packet::{
-    ClientboundPlayerPositionAndLook, EntityHeadLook, EntityLookAndMove, JoinGame, Packet,
-    PlayerInfo, PlayerPositionAndLook, SpawnPlayer,
+    ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook, EntityLookAndMove, JoinGame,
+    Packet, PlayerInfo, PlayerPositionAndLook, SpawnPlayer,
 };
 use std::collections::HashMap;
 
@@ -68,7 +68,15 @@ fn handle_message<M: Messenger>(
             players.insert(msg.conn_id, player);
         }
         PlayerStateOperations::Delete(msg) => {
-            players.remove(&msg.conn_id);
+            if let Some(player) = players.remove(&msg.conn_id) {
+                messenger.broadcast_packet(
+                    Packet::DestroyEntities(DestroyEntities {
+                        entity_ids: vec![player.entity_id],
+                    }),
+                    None,
+                    true,
+                );
+            }
         }
         PlayerStateOperations::MoveAndLook(msg) => {
             trace!(

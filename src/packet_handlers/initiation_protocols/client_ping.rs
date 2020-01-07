@@ -12,7 +12,7 @@ pub fn handle_client_ping_packet<M: Messenger>(
     conn_id: Uuid,
     messenger: M,
 ) -> TranslationUpdates {
-    match p.clone() {
+    match p {
         Packet::StatusRequest(_) => {
             let status_response = packet::StatusResponse {
                 json_response: String::from(FAKE_RESPONSE),

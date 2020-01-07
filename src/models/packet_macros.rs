@@ -225,7 +225,7 @@ macro_rules! read_packet_field {
     };
     ($stream:ident, LengthPrefixedArray($type:ident)) => {{
         let length = $stream.read_var_int();
-        $stream.read_int_array(length as u32)
+        $stream.read_var_int_array(length as u32)
     }};
     ($stream:ident, Float) => {
         $stream.read_float()

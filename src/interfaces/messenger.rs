@@ -7,6 +7,7 @@ use uuid::Uuid;
 pub trait Messenger {
     fn send_packet(&self, conn_id: Uuid, packet: Packet);
     fn broadcast_packet(&self, packet: Packet, source_conn_id: Option<Uuid>, local: bool);
+    fn broadcast_packet_remote(&self, packet: Packet);
     fn subscribe(&self, conn_id: Uuid, typ: SubscriberType);
     fn new_connection(&self, conn_id: Uuid, socket: TcpStream);
     fn update_translation(&self, conn_id: Uuid, map: Map);
@@ -28,6 +29,13 @@ impl Messenger for Sender<MessengerOperations> {
             source_conn_id,
             local,
         }))
+        .unwrap();
+    }
+
+    fn broadcast_packet_remote(&self, packet: Packet) {
+        self.send(MessengerOperations::BroadcastRemote(
+            BroadcastPacketRemoteMessage { packet },
+        ))
         .unwrap();
     }
 
@@ -63,6 +71,7 @@ impl Messenger for Sender<MessengerOperations> {
 pub enum MessengerOperations {
     Send(SendPacketMessage),
     Broadcast(BroadcastPacketMessage),
+    BroadcastRemote(BroadcastPacketRemoteMessage),
     Subscribe(SubscribeMessage),
     Close(CloseMessage),
     New(NewConnectionMessage),
@@ -103,6 +112,11 @@ pub struct BroadcastPacketMessage {
     pub packet: Packet,
     pub source_conn_id: Option<Uuid>,
     pub local: bool,
+}
+
+#[derive(Debug)]
+pub struct BroadcastPacketRemoteMessage {
+    pub packet: Packet,
 }
 
 #[derive(Debug)]

@@ -16,6 +16,15 @@ pub fn handle_peer_packet<M: Messenger, P: PlayerState>(
                 messenger.broadcast_packet(Packet::SpawnPlayer(packet), None, false);
             }
         }
+        Packet::DestroyEntities(packet) => {
+            assert!(
+                packet.entity_ids.len() == 1,
+                "Cannot handle entity destroy packets from peers with multiple ids"
+            );
+            if packet.entity_ids[0] >= 1000 {
+                messenger.broadcast_packet(Packet::DestroyEntities(packet), None, false);
+            }
+        }
         //We really don't want to have to do this for every type of packet that has an entity id
         //There's probably a better solution here, a macro might do it since the code should be
         //identical but then we still need to list all the packets we can get from the peer that

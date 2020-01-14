@@ -73,6 +73,7 @@ pub fn start<
                 if let Some(position) = extract_map_position(msg.clone().packet) {
                     let new_map_index = patchwork_clone.position_map_index(position);
                     if new_map_index != anchor.map_index {
+                        anchor.disconnect(messenger.clone());
                         *anchor = match &patchwork.maps[new_map_index].peer_connection {
                             Some(peer_connection) => Anchor::connect(
                                 peer_connection.peer.clone(),
@@ -83,10 +84,20 @@ pub fn start<
                                 player_state.clone(),
                             )
                             .unwrap(),
-                            None => Anchor {
-                                conn_id: None,
-                                map_index: new_map_index,
-                            },
+                            None => {
+                                gameplay_router::route_packet(
+                                    msg.packet.clone(),
+                                    msg.conn_id,
+                                    player_state.clone(),
+                                );
+                                if patchwork.maps[anchor.map_index].peer_connection.is_some() {
+                                    player_state.reintroduce(msg.conn_id);
+                                }
+                                Anchor {
+                                    conn_id: None,
+                                    map_index: new_map_index,
+                                }
+                            }
                         }
                     }
                 }
@@ -146,6 +157,12 @@ impl Anchor {
             map_index,
             conn_id: Some(conn_id),
         })
+    }
+
+    pub fn disconnect<M: Messenger>(&self, messenger: M) {
+        if let Some(conn_id) = self.conn_id {
+            messenger.close(conn_id);
+        }
     }
 }
 

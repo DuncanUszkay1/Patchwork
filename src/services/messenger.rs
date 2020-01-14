@@ -67,6 +67,15 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                     });
                 }
             }
+            MessengerOperations::BroadcastRemote(msg) => {
+                (&local_only_broadcast_list).iter().for_each(|conn_id| {
+                    if let Some(socket) = connection_map.get(&conn_id) {
+                        let mut socket_clone = socket.try_clone().unwrap();
+                        let packet_clone = msg.packet.clone();
+                        write(&mut socket_clone, packet_clone);
+                    }
+                });
+            }
             MessengerOperations::Subscribe(msg) => {
                 trace!(
                     "Subscribing conn_id {:?} with type {:?}",

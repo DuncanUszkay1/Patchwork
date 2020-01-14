@@ -14,6 +14,7 @@ pub trait PlayerState {
     );
     fn cross_border(&self, local_conn_id: Uuid, remote_conn_id: Uuid);
     fn broadcast_anchored_event(&self, entity_id: i32, packet: Packet);
+    fn reintroduce(&self, conn_id: Uuid);
 }
 
 impl PlayerState for Sender<PlayerStateOperations> {
@@ -56,6 +57,12 @@ impl PlayerState for Sender<PlayerStateOperations> {
         }))
         .unwrap();
     }
+    fn reintroduce(&self, conn_id: Uuid) {
+        self.send(PlayerStateOperations::Reintroduce(ReintroduceMessage {
+            conn_id,
+        }))
+        .unwrap();
+    }
     fn broadcast_anchored_event(&self, entity_id: i32, packet: Packet) {
         self.send(PlayerStateOperations::BroadcastAnchoredEvent(
             BroadcastAnchoredEventMessage { entity_id, packet },
@@ -70,6 +77,7 @@ pub enum PlayerStateOperations {
     Report(ReportMessage),
     MoveAndLook(PlayerMoveAndLookMessage),
     CrossBorder(CrossBorderMessage),
+    Reintroduce(ReintroduceMessage),
     BroadcastAnchoredEvent(BroadcastAnchoredEventMessage),
 }
 
@@ -122,6 +130,11 @@ pub struct ReportMessage {
 pub struct CrossBorderMessage {
     pub local_conn_id: Uuid,
     pub remote_conn_id: Uuid,
+}
+
+#[derive(Debug)]
+pub struct ReintroduceMessage {
+    pub conn_id: Uuid,
 }
 
 #[derive(Debug)]

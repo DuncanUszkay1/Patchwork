@@ -20,7 +20,6 @@ pub fn start<M: Messenger + Clone>(
     let mut entity_id = 0;
 
     while let Ok(msg) = receiver.recv() {
-        //println!("There are {:?} players on my server", players.len());
         handle_message(
             msg,
             &mut players,
@@ -128,10 +127,20 @@ fn handle_message<M: Messenger>(
             let player = players
                 .get(&msg.local_conn_id)
                 .expect("Could not cross border: player not found");
+            messenger.broadcast_packet_remote(Packet::DestroyEntities(DestroyEntities {
+                entity_ids: vec![player.entity_id],
+            }));
             messenger.send_packet(
                 msg.remote_conn_id,
                 Packet::BorderCrossLogin(player.border_cross_login()),
             );
+        }
+        PlayerStateOperations::Reintroduce(msg) => {
+            trace!("Reintroducing player for conn_id {:?}", msg.conn_id);
+            let player = players
+                .get(&msg.conn_id)
+                .expect("Could not reintroduce: player not found");
+            messenger.broadcast_packet_remote(Packet::SpawnPlayer(player.spawn_player_packet()));
         }
     }
 }

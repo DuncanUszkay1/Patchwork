@@ -5,7 +5,7 @@ use super::interfaces::packet_processor::PacketProcessor;
 use super::models::minecraft_protocol::MinecraftProtocolReader;
 
 use std::env;
-use std::io::ErrorKind::UnexpectedEof;
+use std::io::ErrorKind::{ConnectionReset, UnexpectedEof};
 use std::io::{Cursor, Error, Read};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -71,6 +71,7 @@ pub fn handle_connection<M: Messenger, PP: PacketProcessor, F: Fn()>(
             Err(e) => {
                 match e.kind() {
                     UnexpectedEof => on_closure(),
+                    ConnectionReset => on_closure(),
                     _ => {
                         panic!("conn closed due to {:?}", e);
                     }

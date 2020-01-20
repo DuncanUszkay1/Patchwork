@@ -281,8 +281,8 @@ fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
         if bits_to_read < 14 {
             let remainder_to_read = 14 - bits_to_read;
             let remainder = long << (64 - remainder_to_read) >> (64 - remainder_to_read);
-            block_id += remainder >> remainder_to_read;
-        };
+            block_id += remainder << bits_to_read;
+        }
         block_ids.push(block_id as i32);
         index += 14;
     }

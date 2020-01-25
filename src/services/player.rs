@@ -100,6 +100,17 @@ fn handle_message<M: Messenger>(
                 );
             });
         }
+        Operations::AnchoredMoveAndLook(msg) => {
+            trace!(
+                "Anchored Player Move/Look new_position: {:?} new_angle: {:?} for conn_id {:?}",
+                msg.new_position,
+                msg.new_angle,
+                msg.conn_id
+            );
+            players.entry(msg.conn_id).and_modify(|player| {
+                player.move_and_look(msg.new_position, msg.new_angle);
+            });
+        }
         Operations::Report(msg) => players.iter().for_each(|(conn_id, player)| {
             trace!("Reporting Player State to conn_id {:?}", conn_id);
             if *conn_id != msg.conn_id {

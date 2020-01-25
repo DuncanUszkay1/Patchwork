@@ -1,7 +1,7 @@
 use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
 use super::interfaces::patchwork::Operations;
-use super::interfaces::player::PlayerState;
+use super::interfaces::player::{PlayerState, Position as PlayerPosition};
 use super::map::{Map, Peer, PeerConnection, Position};
 use super::packet;
 use super::packet::Packet;
@@ -57,6 +57,11 @@ pub fn start<
                             trace!(
                                 "Routing packet from conn_id {:?} through anchor",
                                 msg.conn_id
+                            );
+                            player_state.anchored_move_and_look(
+                                msg.conn_id,
+                                extract_player_position((&msg.packet).clone()),
+                                None,
                             );
                             messenger.send_packet(anchor.conn_id.unwrap(), msg.packet.clone());
                         }
@@ -119,6 +124,22 @@ fn extract_map_position(packet: Packet) -> Option<Position> {
         Packet::PlayerPositionAndLook(packet) => Some(Position {
             x: (packet.x / 16.0) as i32,
             z: (packet.z / 16.0) as i32,
+        }),
+        _ => None,
+    }
+}
+
+fn extract_player_position(packet: Packet) -> Option<PlayerPosition> {
+    match packet {
+        Packet::PlayerPosition(packet) => Some(PlayerPosition {
+            x: packet.x,
+            y: packet.feet_y,
+            z: packet.z,
+        }),
+        Packet::PlayerPositionAndLook(packet) => Some(PlayerPosition {
+            x: packet.x,
+            y: packet.feet_y,
+            z: packet.z,
         }),
         _ => None,
     }

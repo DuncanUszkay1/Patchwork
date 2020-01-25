@@ -17,6 +17,15 @@ define_interface!(
         ]
     ),
     (
+        AnchoredMoveAndLook,
+        anchored_move_and_look,
+        [
+            conn_id: Uuid,
+            new_position: Option<Position>,
+            new_angle: Option<Angle>
+        ]
+    ),
+    (
         CrossBorder,
         cross_border,
         [local_conn_id: Uuid, remote_conn_id: Uuid]

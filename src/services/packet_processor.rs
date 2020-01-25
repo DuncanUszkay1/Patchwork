@@ -1,6 +1,6 @@
 use super::interfaces::block::BlockState;
 use super::interfaces::messenger::Messenger;
-use super::interfaces::packet_processor::PacketProcessorOperations;
+use super::interfaces::packet_processor::Operations;
 use super::interfaces::patchwork::PatchworkState;
 use super::interfaces::player::PlayerState;
 
@@ -18,8 +18,8 @@ pub fn start_inbound<
     PA: PatchworkState + Clone,
     B: BlockState + Clone,
 >(
-    receiver: Receiver<PacketProcessorOperations>,
-    _sender: Sender<PacketProcessorOperations>,
+    receiver: Receiver<Operations>,
+    _sender: Sender<Operations>,
     messenger: M,
     player_state: P,
     block_state: B,
@@ -29,7 +29,7 @@ pub fn start_inbound<
 
     while let Ok(msg) = receiver.recv() {
         match msg {
-            PacketProcessorOperations::Inbound(msg) => {
+            Operations::Inbound(msg) => {
                 trace!("Received packet from conn_id {:?}", msg.conn_id);
                 let translation_data = translation_data
                     .entry(msg.conn_id)
@@ -58,7 +58,7 @@ pub fn start_inbound<
                 }
                 translation_data.update(&translation_update);
             }
-            PacketProcessorOperations::SetTranslationData(msg) => {
+            Operations::SetTranslationData(msg) => {
                 trace!(
                     "Applying translation updates {:?} to {:?}",
                     msg.updates,

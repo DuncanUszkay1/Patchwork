@@ -1,5 +1,5 @@
 use super::interfaces::messenger::{Messenger, SubscriberType};
-use super::interfaces::player::{Angle, Player, PlayerStateOperations, Position};
+use super::interfaces::player::{Angle, Operations, Player, Position};
 use super::minecraft_types::float_to_angle;
 use super::packet::{
     BorderCrossLogin, ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook,
@@ -11,8 +11,8 @@ use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
 pub fn start<M: Messenger + Clone>(
-    receiver: Receiver<PlayerStateOperations>,
-    _sender: Sender<PlayerStateOperations>,
+    receiver: Receiver<Operations>,
+    _sender: Sender<Operations>,
     messenger: M,
 ) {
     let mut players = HashMap::<Uuid, Player>::new();
@@ -31,14 +31,14 @@ pub fn start<M: Messenger + Clone>(
 }
 
 fn handle_message<M: Messenger>(
-    msg: PlayerStateOperations,
+    msg: Operations,
     players: &mut HashMap<Uuid, Player>,
     entity_conn_ids: &mut HashMap<i32, Uuid>,
     entity_id: &mut i32,
     messenger: M,
 ) {
     match msg {
-        PlayerStateOperations::New(msg) => {
+        Operations::New(msg) => {
             let mut player = msg.player;
             if player.entity_id == 0 {
                 player.entity_id = *entity_id;
@@ -67,7 +67,7 @@ fn handle_message<M: Messenger>(
             entity_conn_ids.insert(player.entity_id, msg.conn_id);
             players.insert(msg.conn_id, player);
         }
-        PlayerStateOperations::Delete(msg) => {
+        Operations::Delete(msg) => {
             if let Some(player) = players.remove(&msg.conn_id) {
                 messenger.broadcast(
                     Packet::DestroyEntities(DestroyEntities {
@@ -78,7 +78,7 @@ fn handle_message<M: Messenger>(
                 );
             }
         }
-        PlayerStateOperations::MoveAndLook(msg) => {
+        Operations::MoveAndLook(msg) => {
             trace!(
                 "Player Move/Look new_position: {:?} new_angle: {:?} for conn_id {:?}",
                 msg.new_position,
@@ -100,7 +100,7 @@ fn handle_message<M: Messenger>(
                 );
             });
         }
-        PlayerStateOperations::Report(msg) => players.iter().for_each(|(conn_id, player)| {
+        Operations::Report(msg) => players.iter().for_each(|(conn_id, player)| {
             trace!("Reporting Player State to conn_id {:?}", conn_id);
             if *conn_id != msg.conn_id {
                 messenger.send_packet(msg.conn_id, Packet::PlayerInfo(player.player_info_packet()));
@@ -112,7 +112,7 @@ fn handle_message<M: Messenger>(
         }),
         //When we get a message from a peer that comes from one of our anchored players we want to
         //make sure they don't get the result packets.
-        PlayerStateOperations::BroadcastAnchoredEvent(msg) => {
+        Operations::BroadcastAnchoredEvent(msg) => {
             if let Some(entity_id) = entity_conn_ids.get(&msg.entity_id) {
                 trace!("Appending entity id {:?} to anchored event", entity_id);
             }
@@ -122,7 +122,7 @@ fn handle_message<M: Messenger>(
                 SubscriberType::Local,
             );
         }
-        PlayerStateOperations::CrossBorder(msg) => {
+        Operations::CrossBorder(msg) => {
             trace!("Crossing Border for conn_id {:?}", msg.local_conn_id);
             let player = players
                 .get(&msg.local_conn_id)
@@ -139,7 +139,7 @@ fn handle_message<M: Messenger>(
                 Packet::BorderCrossLogin(player.border_cross_login()),
             );
         }
-        PlayerStateOperations::Reintroduce(msg) => {
+        Operations::Reintroduce(msg) => {
             trace!("Reintroducing player for conn_id {:?}", msg.conn_id);
             let player = players
                 .get(&msg.conn_id)

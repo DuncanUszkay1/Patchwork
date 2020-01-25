@@ -1,6 +1,6 @@
 use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
-use super::interfaces::patchwork::PatchworkStateOperations;
+use super::interfaces::patchwork::Operations;
 use super::interfaces::player::PlayerState;
 use super::map::{Map, Peer, PeerConnection, Position};
 use super::packet;
@@ -19,8 +19,8 @@ pub fn start<
     P: PlayerState + Clone,
     PP: 'static + PacketProcessor + Clone + Send,
 >(
-    receiver: Receiver<PatchworkStateOperations>,
-    sender: Sender<PatchworkStateOperations>,
+    receiver: Receiver<Operations>,
+    sender: Sender<Operations>,
     messenger: M,
     inbound_packet_processor: PP,
     player_state: P,
@@ -29,7 +29,7 @@ pub fn start<
 
     while let Ok(msg) = receiver.recv() {
         match msg {
-            PatchworkStateOperations::New(msg) => {
+            Operations::New(msg) => {
                 trace!("Adding Peer Map for peer {:?}", msg.peer);
                 patchwork.add_peer_map(
                     msg.peer,
@@ -38,10 +38,10 @@ pub fn start<
                     sender.clone(),
                 )
             }
-            PatchworkStateOperations::ConnectMap(msg) => {
+            Operations::ConnectMap(msg) => {
                 patchwork.connect_map(msg.map_index, msg.peer_connection, messenger.clone());
             }
-            PatchworkStateOperations::RoutePlayerPacket(msg) => {
+            Operations::RoutePlayerPacket(msg) => {
                 let patchwork_clone = patchwork.clone();
                 let anchor = patchwork
                     .player_anchors
@@ -70,7 +70,7 @@ pub fn start<
                         );
                     }
                 }
-                if let Some(position) = extract_map_position(msg.clone().packet) {
+                if let Some(position) = extract_map_position((&msg.packet).clone()) {
                     let new_map_index = patchwork_clone.position_map_index(position);
                     if new_map_index != anchor.map_index {
                         anchor.disconnect(messenger.clone());
@@ -102,7 +102,7 @@ pub fn start<
                     }
                 }
             }
-            PatchworkStateOperations::Report => {
+            Operations::Report(_) => {
                 trace!("Reporting patchwork state");
                 patchwork.clone().report(messenger.clone());
             }
@@ -212,7 +212,7 @@ impl Patchwork {
         peer: Peer,
         messenger: M,
         inbound_packet_processor: PP,
-        patchwork_state: Sender<PatchworkStateOperations>,
+        patchwork_state: Sender<Operations>,
     ) {
         let map = Map::new(self.next_position(), self.next_entity_id_block());
         self.maps.push(map.clone());

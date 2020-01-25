@@ -1,4 +1,4 @@
-use super::interfaces::connection::ConnectionOperations;
+use super::interfaces::connection::Operations;
 use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
 use super::interfaces::patchwork::PatchworkState;
@@ -12,8 +12,8 @@ pub fn start<
     PA: PatchworkState + Clone,
     PP: 'static + PacketProcessor + Clone + Send,
 >(
-    receiver: Receiver<ConnectionOperations>,
-    _sender: Sender<ConnectionOperations>,
+    receiver: Receiver<Operations>,
+    _sender: Sender<Operations>,
     messenger: M,
     player_state: P,
     _patchwork_state: PA,
@@ -21,9 +21,9 @@ pub fn start<
 ) {
     while let Ok(msg) = receiver.recv() {
         match msg {
-            ConnectionOperations::Close(conn_id) => {
-                messenger.close(conn_id);
-                player_state.delete_player(conn_id);
+            Operations::Close(msg) => {
+                messenger.close(msg.conn_id);
+                player_state.delete_player(msg.conn_id);
             }
         }
     }

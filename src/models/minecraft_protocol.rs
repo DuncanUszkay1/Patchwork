@@ -238,7 +238,7 @@ fn write_chunk_section<S: Write>(stream: &mut S, v: ChunkSection) {
     stream.write_var_int(v.data_array_length);
     let mut long: i64 = 0;
     for i in 0..4096 {
-        let block_to_place = v.block_ids[i as usize] as i64;
+        let block_to_place = i64::from(v.block_ids[i as usize]);
         let offset = (PALETTE_SIZE * i) % 64;
         long += block_to_place << offset;
         if ((i * PALETTE_SIZE) % 64) >= 64 - PALETTE_SIZE {
@@ -281,8 +281,8 @@ fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
         if bits_to_read < 14 {
             let remainder_to_read = 14 - bits_to_read;
             let remainder = long << (64 - remainder_to_read) >> (64 - remainder_to_read);
-            block_id += remainder >> remainder_to_read;
-        };
+            block_id += remainder << bits_to_read;
+        }
         block_ids.push(block_id as i32);
         index += 14;
     }

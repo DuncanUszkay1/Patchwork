@@ -6,8 +6,12 @@ use uuid::Uuid;
 
 pub trait Messenger {
     fn send_packet(&self, conn_id: Uuid, packet: Packet);
-    fn broadcast_packet(&self, packet: Packet, source_conn_id: Option<Uuid>, local: bool);
-    fn broadcast_packet_remote(&self, packet: Packet);
+    fn broadcast(
+        &self,
+        packet: Packet,
+        source_conn_id: Option<Uuid>,
+        subscriber_type: SubscriberType,
+    );
     fn subscribe(&self, conn_id: Uuid, typ: SubscriberType);
     fn new_connection(&self, conn_id: Uuid, socket: TcpStream);
     fn update_translation(&self, conn_id: Uuid, map: Map);
@@ -23,19 +27,17 @@ impl Messenger for Sender<MessengerOperations> {
         .unwrap();
     }
 
-    fn broadcast_packet(&self, packet: Packet, source_conn_id: Option<Uuid>, local: bool) {
+    fn broadcast(
+        &self,
+        packet: Packet,
+        source_conn_id: Option<Uuid>,
+        subscriber_type: SubscriberType,
+    ) {
         self.send(MessengerOperations::Broadcast(BroadcastPacketMessage {
             packet,
             source_conn_id,
-            local,
+            subscriber_type,
         }))
-        .unwrap();
-    }
-
-    fn broadcast_packet_remote(&self, packet: Packet) {
-        self.send(MessengerOperations::BroadcastRemote(
-            BroadcastPacketRemoteMessage { packet },
-        ))
         .unwrap();
     }
 
@@ -71,7 +73,6 @@ impl Messenger for Sender<MessengerOperations> {
 pub enum MessengerOperations {
     Send(SendPacketMessage),
     Broadcast(BroadcastPacketMessage),
-    BroadcastRemote(BroadcastPacketRemoteMessage),
     Subscribe(SubscribeMessage),
     Close(CloseMessage),
     New(NewConnectionMessage),
@@ -104,19 +105,15 @@ pub struct CloseMessage {
 #[derive(Debug)]
 pub enum SubscriberType {
     All,
-    LocalOnly,
+    Local,
+    Remote,
 }
 
 #[derive(Debug)]
 pub struct BroadcastPacketMessage {
     pub packet: Packet,
     pub source_conn_id: Option<Uuid>,
-    pub local: bool,
-}
-
-#[derive(Debug)]
-pub struct BroadcastPacketRemoteMessage {
-    pub packet: Packet,
+    pub subscriber_type: SubscriberType,
 }
 
 #[derive(Debug)]

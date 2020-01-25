@@ -13,7 +13,7 @@ pub fn handle_peer_packet<M: Messenger, P: PlayerState>(
     match packet.clone() {
         Packet::SpawnPlayer(packet) => {
             if packet.entity_id >= 1000 {
-                messenger.broadcast_packet(Packet::SpawnPlayer(packet), None, false);
+                messenger.broadcast(Packet::SpawnPlayer(packet), None, SubscriberType::Local);
             }
         }
         Packet::DestroyEntities(packet) => {
@@ -22,7 +22,7 @@ pub fn handle_peer_packet<M: Messenger, P: PlayerState>(
                 "Cannot handle entity destroy packets from peers with multiple ids"
             );
             if packet.entity_ids[0] >= 1000 {
-                messenger.broadcast_packet(Packet::DestroyEntities(packet), None, false);
+                messenger.broadcast(Packet::DestroyEntities(packet), None, SubscriberType::Local);
             }
         }
         //We really don't want to have to do this for every type of packet that has an entity id
@@ -34,7 +34,7 @@ pub fn handle_peer_packet<M: Messenger, P: PlayerState>(
             player_state.broadcast_anchored_event(entity_id, Packet::EntityLookAndMove(packet));
         }
         _ => {
-            messenger.broadcast_packet(packet, None, false);
+            messenger.broadcast(packet, None, SubscriberType::Local);
         }
     }
 }
@@ -48,9 +48,9 @@ pub fn handle_subscriber_packet<M: Messenger, P: PlayerState, B: BlockState>(
     //Everytime a subscriber sends us a packet, we subscribe them to our messages and report our
     //state to them
 
-    trace!("Reporting state to peer");
+    trace!("Reporting state to peer {:?}", conn_id);
 
-    messenger.subscribe(conn_id, SubscriberType::LocalOnly);
+    messenger.subscribe(conn_id, SubscriberType::Remote);
     player_state.report(conn_id);
     block_state.report(conn_id);
 }

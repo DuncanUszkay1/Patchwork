@@ -1,6 +1,7 @@
 use super::super::interfaces::messenger::{MessengerOperations, SubscriberType};
-use super::packet::{translate_outgoing, write};
+use super::packet::{translate_outgoing, write, Packet};
 use super::translation::TranslationInfo;
+
 use std::collections::{HashMap, HashSet};
 use std::net::TcpStream;
 use std::sync::mpsc::{Receiver, Sender};
@@ -8,8 +9,7 @@ use uuid::Uuid;
 
 pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerOperations>) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();
-    let mut local_only_broadcast_list = HashSet::<Uuid>::new();
-    let mut all_broadcast_list = HashSet::<Uuid>::new();
+    let mut subscriber_list = SubscriberList::new();
     let mut translation_data = HashMap::<Uuid, TranslationInfo>::new();
 
     while let Ok(msg) = receiver.recv() {
@@ -35,46 +35,22 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                 }
             }
             MessengerOperations::Broadcast(msg) => {
-                if msg.local {
-                    trace!(
-                        "Broadcasting packet {:?} from local source conn_id {:?}",
-                        msg.packet.debug_print_type(),
-                        msg.source_conn_id
-                    );
+                trace!(
+                    "Broadcasting packet {:?} to subscriber_type {:?}",
+                    msg.packet.debug_print_type(),
+                    msg.subscriber_type,
+                );
+                let receipients: HashSet<Uuid> = subscriber_list.receipients(msg.subscriber_type);
+                if let Some(source) = msg.source_conn_id {
+                    let filtered_receipients: HashSet<Uuid> = receipients
+                        .iter()
+                        .filter(|conn_id| **conn_id != source)
+                        .copied()
+                        .collect();
+                    broadcast(msg.packet, filtered_receipients, &connection_map)
                 } else {
-                    trace!(
-                        "Broadcasting packet {:?} from remote source conn_id {:?}",
-                        msg.packet.debug_print_type(),
-                        msg.source_conn_id
-                    );
+                    broadcast(msg.packet, receipients, &connection_map)
                 }
-                (&all_broadcast_list).iter().for_each(|conn_id| {
-                    if msg.source_conn_id.is_none() || msg.source_conn_id.unwrap() != *conn_id {
-                        if let Some(socket) = connection_map.get(&conn_id) {
-                            let mut socket_clone = socket.try_clone().unwrap();
-                            let packet_clone = msg.packet.clone();
-                            write(&mut socket_clone, packet_clone);
-                        }
-                    }
-                });
-                if msg.local {
-                    (&local_only_broadcast_list).iter().for_each(|conn_id| {
-                        if let Some(socket) = connection_map.get(&conn_id) {
-                            let mut socket_clone = socket.try_clone().unwrap();
-                            let packet_clone = msg.packet.clone();
-                            write(&mut socket_clone, packet_clone);
-                        }
-                    });
-                }
-            }
-            MessengerOperations::BroadcastRemote(msg) => {
-                (&local_only_broadcast_list).iter().for_each(|conn_id| {
-                    if let Some(socket) = connection_map.get(&conn_id) {
-                        let mut socket_clone = socket.try_clone().unwrap();
-                        let packet_clone = msg.packet.clone();
-                        write(&mut socket_clone, packet_clone);
-                    }
-                });
             }
             MessengerOperations::Subscribe(msg) => {
                 trace!(
@@ -84,10 +60,14 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                 );
                 match msg.typ {
                     SubscriberType::All => {
-                        all_broadcast_list.insert(msg.conn_id);
+                        subscriber_list.add_local(msg.conn_id);
+                        subscriber_list.add_remote(msg.conn_id);
                     }
-                    SubscriberType::LocalOnly => {
-                        local_only_broadcast_list.insert(msg.conn_id);
+                    SubscriberType::Local => {
+                        subscriber_list.add_local(msg.conn_id);
+                    }
+                    SubscriberType::Remote => {
+                        subscriber_list.add_remote(msg.conn_id);
                     }
                 }
             }
@@ -95,8 +75,7 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                 trace!("Closing connection {:?}", msg.conn_id);
                 connection_map.remove(&msg.conn_id);
                 translation_data.remove(&msg.conn_id);
-                local_only_broadcast_list.remove(&msg.conn_id);
-                all_broadcast_list.remove(&msg.conn_id);
+                subscriber_list.remove(&msg.conn_id);
             }
             MessengerOperations::New(msg) => {
                 trace!(
@@ -121,5 +100,58 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                 );
             }
         }
+    }
+}
+
+fn broadcast<'a, I: IntoIterator<Item = Uuid>>(
+    packet: Packet,
+    conn_ids: I,
+    connection_map: &'a HashMap<Uuid, TcpStream>,
+) {
+    conn_ids.into_iter().for_each(|conn_id| {
+        if let Some(socket) = connection_map.get(&conn_id) {
+            let mut socket_clone = socket.try_clone().unwrap();
+            let packet_clone = packet.clone();
+            write(&mut socket_clone, packet_clone);
+        }
+    });
+}
+
+struct SubscriberList {
+    remote_subscribers: HashSet<Uuid>,
+    local_subscribers: HashSet<Uuid>,
+}
+
+impl SubscriberList {
+    pub fn new() -> SubscriberList {
+        SubscriberList {
+            remote_subscribers: HashSet::<Uuid>::new(),
+            local_subscribers: HashSet::<Uuid>::new(),
+        }
+    }
+
+    pub fn receipients(&self, subscriber_type: SubscriberType) -> HashSet<Uuid> {
+        match subscriber_type {
+            SubscriberType::All => self
+                .remote_subscribers
+                .union(&self.local_subscribers)
+                .copied()
+                .collect(),
+            SubscriberType::Local => self.local_subscribers.clone(),
+            SubscriberType::Remote => self.remote_subscribers.clone(),
+        }
+    }
+
+    pub fn add_local(&mut self, uuid: Uuid) {
+        self.local_subscribers.insert(uuid);
+    }
+
+    pub fn add_remote(&mut self, uuid: Uuid) {
+        self.remote_subscribers.insert(uuid);
+    }
+
+    pub fn remove(&mut self, uuid: &Uuid) {
+        self.local_subscribers.remove(uuid);
+        self.remote_subscribers.remove(uuid);
     }
 }

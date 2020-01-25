@@ -168,24 +168,21 @@ fn handle_message<M: Messenger>(
                 "Building and sending status ping response for conn_id {:?}",
                 msg.conn_id
             );
-            let mut status_response_object = minecraft_types::StatusResponse {
+            let status_response_object = minecraft_types::StatusResponse {
                 version: msg.version,
-                players: minecraft_types::Players {
+                players: minecraft_types::PingPlayersInfo {
                     max: SERVER_MAX_CAPACITY,
                     online: players.len() as u16,
-                    sample: vec![],
+                    sample: players
+                        .iter()
+                        .map(|(id, player)| minecraft_types::PingSamplePlayer {
+                            name: player.name.clone(),
+                            id: id.to_string(),
+                        })
+                        .collect(),
                 },
                 description: msg.description,
             };
-            for (id, player) in players {
-                status_response_object
-                    .players
-                    .sample
-                    .push(minecraft_types::SamplePlayer {
-                        name: player.name.clone(),
-                        id: id.to_string(),
-                    })
-            }
             let status_response = StatusResponse {
                 json_response: serde_json::to_string(&status_response_object).unwrap(),
             };

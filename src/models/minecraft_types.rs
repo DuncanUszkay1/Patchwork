@@ -20,16 +20,16 @@ pub struct Version {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SamplePlayer {
+pub struct PingSamplePlayer {
     pub name: String,
     pub id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Players {
+pub struct PingPlayersInfo {
     pub max: u16,
     pub online: u16,
-    pub sample: Vec<SamplePlayer>,
+    pub sample: Vec<PingSamplePlayer>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,6 +40,6 @@ pub struct Description {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StatusResponse {
     pub version: Version,
-    pub players: Players,
+    pub players: PingPlayersInfo,
     pub description: Description,
 }

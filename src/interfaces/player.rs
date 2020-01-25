@@ -38,13 +38,9 @@ define_interface!(
     ),
     (Reintroduce, reintroduce, [conn_id: Uuid]),
     (
-        StatusResponse, 
+        StatusResponse,
         status_response,
-        [
-            conn_id: Uuid, 
-            version: Version, 
-            description: Description
-        ]
+        [conn_id: Uuid, version: Version, description: Description]
     )
 );
 

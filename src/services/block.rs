@@ -1,4 +1,4 @@
-use super::interfaces::block::BlockStateOperations;
+use super::interfaces::block::Operations;
 use super::interfaces::messenger::Messenger;
 use super::minecraft_types::ChunkSection;
 use super::packet::{ChunkData, Packet};
@@ -25,13 +25,13 @@ fn fill_dummy_block_ids(ids: &mut Vec<i32>) {
 }
 
 pub fn start<M: Messenger>(
-    receiver: Receiver<BlockStateOperations>,
-    _sender: Sender<BlockStateOperations>,
+    receiver: Receiver<Operations>,
+    _sender: Sender<Operations>,
     messenger: M,
 ) {
     while let Ok(msg) = receiver.recv() {
         match msg {
-            BlockStateOperations::Report(msg) => {
+            Operations::Report(msg) => {
                 trace!("Reporting block state to {:?}", msg.conn_id);
                 //Just send a hardcoded simple chunk pillar
                 let mut block_ids = Vec::new();

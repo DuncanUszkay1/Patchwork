@@ -1,4 +1,4 @@
-use super::super::interfaces::messenger::{MessengerOperations, SubscriberType};
+use super::super::interfaces::messenger::{Operations, SubscriberType};
 use super::packet::{translate_outgoing, write, Packet};
 use super::translation::TranslationInfo;
 
@@ -7,14 +7,14 @@ use std::net::TcpStream;
 use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
-pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerOperations>) {
+pub fn start(receiver: Receiver<Operations>, _sender: Sender<Operations>) {
     let mut connection_map = HashMap::<Uuid, TcpStream>::new();
     let mut subscriber_list = SubscriberList::new();
     let mut translation_data = HashMap::<Uuid, TranslationInfo>::new();
 
     while let Ok(msg) = receiver.recv() {
         match msg {
-            MessengerOperations::Send(msg) => {
+            Operations::Send(msg) => {
                 trace!(
                     "Sending packet {:?} to conn_id {:?}",
                     msg.packet.debug_print_type(),
@@ -34,7 +34,7 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                     trace!("Connection ID not found");
                 }
             }
-            MessengerOperations::Broadcast(msg) => {
+            Operations::Broadcast(msg) => {
                 trace!(
                     "Broadcasting packet {:?} to subscriber_type {:?}",
                     msg.packet.debug_print_type(),
@@ -52,7 +52,7 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                     broadcast(msg.packet, receipients, &connection_map)
                 }
             }
-            MessengerOperations::Subscribe(msg) => {
+            Operations::Subscribe(msg) => {
                 trace!(
                     "Subscribing conn_id {:?} with type {:?}",
                     msg.conn_id,
@@ -71,13 +71,13 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                     }
                 }
             }
-            MessengerOperations::Close(msg) => {
+            Operations::Close(msg) => {
                 trace!("Closing connection {:?}", msg.conn_id);
                 connection_map.remove(&msg.conn_id);
                 translation_data.remove(&msg.conn_id);
                 subscriber_list.remove(&msg.conn_id);
             }
-            MessengerOperations::New(msg) => {
+            Operations::New(msg) => {
                 trace!(
                     "New Connection with conn_id {:?} on socket {:?}",
                     msg.conn_id,
@@ -85,7 +85,7 @@ pub fn start(receiver: Receiver<MessengerOperations>, _sender: Sender<MessengerO
                 );
                 connection_map.insert(msg.conn_id, msg.socket);
             }
-            MessengerOperations::UpdateTranslation(msg) => {
+            Operations::UpdateTranslation(msg) => {
                 trace!(
                     "Updating connection map for conn_id {:?} to {:?}",
                     msg.conn_id,

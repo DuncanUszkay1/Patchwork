@@ -4,120 +4,31 @@ use std::net::TcpStream;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
 
-pub trait Messenger {
-    fn send_packet(&self, conn_id: Uuid, packet: Packet);
-    fn broadcast(
-        &self,
-        packet: Packet,
-        source_conn_id: Option<Uuid>,
-        subscriber_type: SubscriberType,
-    );
-    fn subscribe(&self, conn_id: Uuid, typ: SubscriberType);
-    fn new_connection(&self, conn_id: Uuid, socket: TcpStream);
-    fn update_translation(&self, conn_id: Uuid, map: Map);
-    fn close(&self, conn_id: Uuid);
-}
-
-impl Messenger for Sender<MessengerOperations> {
-    fn send_packet(&self, conn_id: Uuid, packet: Packet) {
-        self.send(MessengerOperations::Send(SendPacketMessage {
-            conn_id,
-            packet,
-        }))
-        .unwrap();
-    }
-
-    fn broadcast(
-        &self,
-        packet: Packet,
-        source_conn_id: Option<Uuid>,
-        subscriber_type: SubscriberType,
-    ) {
-        self.send(MessengerOperations::Broadcast(BroadcastPacketMessage {
-            packet,
-            source_conn_id,
-            subscriber_type,
-        }))
-        .unwrap();
-    }
-
-    fn subscribe(&self, conn_id: Uuid, typ: SubscriberType) {
-        self.send(MessengerOperations::Subscribe(SubscribeMessage {
-            conn_id,
-            typ,
-        }))
-        .unwrap();
-    }
-
-    fn close(&self, conn_id: Uuid) {
-        self.send(MessengerOperations::Close(CloseMessage { conn_id }))
-            .unwrap();
-    }
-
-    fn new_connection(&self, conn_id: Uuid, socket: TcpStream) {
-        self.send(MessengerOperations::New(NewConnectionMessage {
-            conn_id,
-            socket,
-        }))
-        .unwrap();
-    }
-
-    fn update_translation(&self, conn_id: Uuid, map: Map) {
-        self.send(MessengerOperations::UpdateTranslation(
-            UpdateTranslationMessage { conn_id, map },
-        ))
-        .unwrap();
-    }
-}
-
-pub enum MessengerOperations {
-    Send(SendPacketMessage),
-    Broadcast(BroadcastPacketMessage),
-    Subscribe(SubscribeMessage),
-    Close(CloseMessage),
-    New(NewConnectionMessage),
-    UpdateTranslation(UpdateTranslationMessage),
-}
-
-#[derive(Debug)]
-pub struct SendPacketMessage {
-    pub conn_id: Uuid,
-    pub packet: Packet,
-}
-
-#[derive(Debug)]
-pub struct UpdateTranslationMessage {
-    pub conn_id: Uuid,
-    pub map: Map,
-}
-
-#[derive(Debug)]
-pub struct SubscribeMessage {
-    pub conn_id: Uuid,
-    pub typ: SubscriberType,
-}
-
-#[derive(Debug)]
-pub struct CloseMessage {
-    pub conn_id: Uuid,
-}
+define_interface!(
+    Messenger,
+    (Send, send_packet, [conn_id: Uuid, packet: Packet]),
+    (
+        Broadcast,
+        broadcast,
+        [
+            packet: Packet,
+            source_conn_id: Option<Uuid>,
+            subscriber_type: SubscriberType
+        ]
+    ),
+    (Subscribe, subscribe, [conn_id: Uuid, typ: SubscriberType]),
+    (New, new_connection, [conn_id: Uuid, socket: TcpStream]),
+    (
+        UpdateTranslation,
+        update_translation,
+        [conn_id: Uuid, map: Map]
+    ),
+    (Close, close, [conn_id: Uuid])
+);
 
 #[derive(Debug)]
 pub enum SubscriberType {
     All,
     Local,
     Remote,
-}
-
-#[derive(Debug)]
-pub struct BroadcastPacketMessage {
-    pub packet: Packet,
-    pub source_conn_id: Option<Uuid>,
-    pub subscriber_type: SubscriberType,
-}
-
-#[derive(Debug)]
-pub struct NewConnectionMessage {
-    pub conn_id: Uuid,
-    pub socket: TcpStream,
 }

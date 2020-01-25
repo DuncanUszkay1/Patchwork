@@ -1,3 +1,5 @@
+#[macro_use]
+mod interface_macro;
 pub mod block;
 pub mod connection;
 pub mod messenger;

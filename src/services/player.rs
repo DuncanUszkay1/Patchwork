@@ -1,9 +1,11 @@
+use super::constants::SERVER_MAX_CAPACITY;
 use super::interfaces::messenger::{Messenger, SubscriberType};
 use super::interfaces::player::{Angle, Operations, Player, Position};
+use super::minecraft_types;
 use super::minecraft_types::float_to_angle;
 use super::packet::{
     BorderCrossLogin, ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook,
-    EntityLookAndMove, JoinGame, Packet, PlayerInfo, SpawnPlayer,
+    EntityLookAndMove, JoinGame, Packet, PlayerInfo, SpawnPlayer, StatusResponse,
 };
 use std::collections::HashMap;
 
@@ -160,6 +162,34 @@ fn handle_message<M: Messenger>(
                 None,
                 SubscriberType::Remote,
             );
+        }
+        Operations::StatusResponse(msg) => {
+            trace!(
+                "Building and sending status ping response for conn_id {:?}",
+                msg.conn_id
+            );
+            let mut status_response_object = minecraft_types::StatusResponse {
+                version: msg.version,
+                players: minecraft_types::Players {
+                    max: SERVER_MAX_CAPACITY,
+                    online: players.len() as u16,
+                    sample: vec![],
+                },
+                description: msg.description,
+            };
+            for (id, player) in players {
+                status_response_object
+                    .players
+                    .sample
+                    .push(minecraft_types::SamplePlayer {
+                        name: player.name.clone(),
+                        id: id.to_string(),
+                    })
+            }
+            let status_response = StatusResponse {
+                json_response: serde_json::to_string(&status_response_object).unwrap(),
+            };
+            messenger.send_packet(msg.conn_id, Packet::StatusResponse(status_response));
         }
     }
 }

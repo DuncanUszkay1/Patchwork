@@ -8,5 +8,6 @@ pub mod patchwork;
 pub mod player;
 
 use super::models::map;
+use super::models::minecraft_types;
 use super::models::packet;
 use super::models::translation;

@@ -1,24 +1,30 @@
+use super::constants::{SERVER_DESCRIPTION, SERVER_PROTOCOL, SERVER_VERSION};
 use super::interfaces::messenger::Messenger;
+use super::interfaces::player::PlayerState;
+use super::minecraft_types::{Description, Version};
 use super::packet;
 use super::packet::Packet;
 use super::translation::TranslationUpdates;
 use uuid::Uuid;
 
-const FAKE_RESPONSE: &str = "{\"version\": {\"name\": \"1.13.2\",\"protocol\": 404},\"players\": {\"max\": 100,\"online\": 5,\"sample\": [{\"name\": \"thinkofdeath\",\"id\": \"4566e69f-c907-48ee-8d71-d7ba5aa00d20\"}]},\"description\": {\"text\": \"Hello world\"},\"favicon\": \"data:image/png;base64,<data>\"}";
-
 // Called when client pings the server
-pub fn handle_client_ping_packet<M: Messenger>(
+pub fn handle_client_ping_packet<M: Messenger, P: PlayerState>(
     p: Packet,
     conn_id: Uuid,
     messenger: M,
+    player_state: P,
 ) -> TranslationUpdates {
     match p {
         Packet::StatusRequest(_) => {
-            let status_response = packet::StatusResponse {
-                json_response: String::from(FAKE_RESPONSE),
+            let version = Version {
+                name: SERVER_VERSION.to_string(),
+                protocol: SERVER_PROTOCOL,
+            };
+            let description = Description {
+                text: SERVER_DESCRIPTION.to_string(),
             };
 
-            messenger.send_packet(conn_id, Packet::StatusResponse(status_response));
+            player_state.status_response(conn_id, version, description);
         }
         Packet::Ping(ping) => {
             let pong = packet::Pong {

@@ -1,4 +1,4 @@
-use super::interfaces::messenger::Messenger;
+use super::interfaces::messenger::{Messenger, SubscriberType};
 use super::interfaces::player::{Angle, Player, PlayerStateOperations, Position};
 use super::minecraft_types::float_to_angle;
 use super::packet::{
@@ -54,27 +54,27 @@ fn handle_message<M: Messenger>(
                 msg.conn_id,
                 Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_packet()),
             );
-            messenger.broadcast_packet(
+            messenger.broadcast(
                 Packet::PlayerInfo(player.player_info_packet()),
                 Some(msg.conn_id),
-                true,
+                SubscriberType::All,
             );
-            messenger.broadcast_packet(
+            messenger.broadcast(
                 Packet::SpawnPlayer(player.spawn_player_packet()),
                 Some(msg.conn_id),
-                true,
+                SubscriberType::All,
             );
             entity_conn_ids.insert(player.entity_id, msg.conn_id);
             players.insert(msg.conn_id, player);
         }
         PlayerStateOperations::Delete(msg) => {
             if let Some(player) = players.remove(&msg.conn_id) {
-                messenger.broadcast_packet(
+                messenger.broadcast(
                     Packet::DestroyEntities(DestroyEntities {
                         entity_ids: vec![player.entity_id],
                     }),
                     None,
-                    true,
+                    SubscriberType::All,
                 );
             }
         }
@@ -86,17 +86,17 @@ fn handle_message<M: Messenger>(
                 msg.conn_id
             );
             players.entry(msg.conn_id).and_modify(|player| {
-                messenger.broadcast_packet(
+                messenger.broadcast(
                     Packet::EntityLookAndMove(
                         player.move_and_look(msg.new_position, msg.new_angle),
                     ),
                     Some(player.conn_id),
-                    true,
+                    SubscriberType::All,
                 );
-                messenger.broadcast_packet(
+                messenger.broadcast(
                     Packet::EntityHeadLook(player.entity_head_look()),
                     Some(player.conn_id),
-                    true,
+                    SubscriberType::All,
                 );
             });
         }
@@ -116,10 +116,10 @@ fn handle_message<M: Messenger>(
             if let Some(entity_id) = entity_conn_ids.get(&msg.entity_id) {
                 trace!("Appending entity id {:?} to anchored event", entity_id);
             }
-            messenger.broadcast_packet(
+            messenger.broadcast(
                 msg.packet,
                 entity_conn_ids.get(&msg.entity_id).copied(),
-                false,
+                SubscriberType::Local,
             );
         }
         PlayerStateOperations::CrossBorder(msg) => {
@@ -127,9 +127,13 @@ fn handle_message<M: Messenger>(
             let player = players
                 .get(&msg.local_conn_id)
                 .expect("Could not cross border: player not found");
-            messenger.broadcast_packet_remote(Packet::DestroyEntities(DestroyEntities {
-                entity_ids: vec![player.entity_id],
-            }));
+            messenger.broadcast(
+                Packet::DestroyEntities(DestroyEntities {
+                    entity_ids: vec![player.entity_id],
+                }),
+                None,
+                SubscriberType::Remote,
+            );
             messenger.send_packet(
                 msg.remote_conn_id,
                 Packet::BorderCrossLogin(player.border_cross_login()),
@@ -140,7 +144,11 @@ fn handle_message<M: Messenger>(
             let player = players
                 .get(&msg.conn_id)
                 .expect("Could not reintroduce: player not found");
-            messenger.broadcast_packet_remote(Packet::SpawnPlayer(player.spawn_player_packet()));
+            messenger.broadcast(
+                Packet::SpawnPlayer(player.spawn_player_packet()),
+                None,
+                SubscriberType::Remote,
+            );
         }
     }
 }

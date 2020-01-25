@@ -1,4 +1,4 @@
-use super::interfaces::messenger::Messenger;
+use super::interfaces::messenger::{Messenger, SubscriberType};
 use super::packet::{KeepAlive, Packet};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::sleep;
@@ -10,12 +10,12 @@ const KEEP_ALIVE_VALUE: i64 = 16;
 pub fn start<M: Messenger>(_: Receiver<i32>, _: Sender<i32>, messenger: M) {
     loop {
         sleep(time::Duration::from_secs(KEEP_ALIVE_PERIOD));
-        messenger.broadcast_packet(
+        messenger.broadcast(
             Packet::KeepAlive(KeepAlive {
                 id: KEEP_ALIVE_VALUE,
             }),
             None,
-            false,
+            SubscriberType::Local,
         );
     }
 }

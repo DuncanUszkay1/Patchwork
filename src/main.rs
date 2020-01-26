@@ -17,6 +17,8 @@ use std::thread;
 extern crate log;
 extern crate simplelog;
 use simplelog::{ConfigBuilder, LevelFilter, SimpleLogger};
+extern crate serde;
+extern crate serde_json;
 
 const DEFAULT_LOGGING_LEVEL: LevelFilter = LevelFilter::Info;
 

@@ -14,6 +14,8 @@ pub mod packet_processor;
 pub mod patchwork;
 pub mod player;
 
+use super::constants;
+
 use super::models::map;
 use super::models::minecraft_types;
 use super::models::packet;

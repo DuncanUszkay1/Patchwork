@@ -1,3 +1,4 @@
+use super::minecraft_types::{Description, Version};
 use super::packet::Packet;
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -35,7 +36,12 @@ define_interface!(
         broadcast_anchored_event,
         [entity_id: i32, packet: Packet]
     ),
-    (Reintroduce, reintroduce, [conn_id: Uuid])
+    (Reintroduce, reintroduce, [conn_id: Uuid]),
+    (
+        StatusResponse,
+        status_response,
+        [conn_id: Uuid, version: Version, description: Description]
+    )
 );
 
 #[derive(Debug, Clone)]

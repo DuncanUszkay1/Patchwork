@@ -35,7 +35,9 @@ pub fn route_packet<
             block_state,
             patchwork_state,
         ),
-        Status::ClientPing => client_ping::handle_client_ping_packet(packet, conn_id, messenger),
+        Status::ClientPing => {
+            client_ping::handle_client_ping_packet(packet, conn_id, messenger, player_state)
+        }
         Status::Play => {
             patchwork_state.route_player_packet(packet, conn_id);
             TranslationUpdates::NoChange

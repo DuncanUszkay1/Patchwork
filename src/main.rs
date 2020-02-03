@@ -202,47 +202,53 @@ mod tests {
         // Since servers handle connection in their own thread, create a channel
         // to retrieve information
         let (tx, rx) = std::sync::mpsc::channel();
-        let tx_clone = tx.clone();
 
         // Start a dummy peer server (although manually, it is the same code as server::listen(),
         // what's been added is the interaction with the channel)
         let connection_string = format!("{}:{}", address, peer_port);
-        let connection_string_clone = connection_string.clone();
-        let ipp = inbound_packet_processor.sender().clone();
-        let ipp2 = ipp.clone();
-        let msgr = messenger.sender().clone();
-        let msgr2 = msgr.clone();
-        let ccs = connection_service.sender().clone();
-        let ccs2 = ccs.clone();
 
-        std::thread::spawn(move || {
-            let listener = std::net::TcpListener::bind(connection_string_clone.clone())
-                .expect("Failed to bind socket");
-            trace!("Listening on {:?}", connection_string_clone);
+        std::thread::spawn({
+            let connection_string = connection_string.clone();
+            let inbound_packet_processor = inbound_packet_processor.sender().clone();
+            let messenger = messenger.sender().clone();
+            let connection_service = connection_service.sender().clone();
+            let tx = tx.clone();
+            move || {
+                let listener = std::net::TcpListener::bind(connection_string.clone())
+                    .expect("Failed to bind socket");
+                trace!("Listening on {:?}", connection_string);
 
-            for stream in listener.incoming() {
-                let stream = stream.expect("Failed to connect to client");
-                let ipp_clone = ipp.clone();
-                let msgr_clone = msgr.clone();
-                let ccs_clone = ccs.clone();
-                let id = uuid::Uuid::new_v4();
-                let sx = tx_clone.clone();
-                thread::spawn(move || {
-                    handle_connection(
-                        stream,
-                        ipp_clone,
-                        msgr_clone,
-                        id,
-                        || ccs_clone.close(id),
-                        sx,
-                    );
-                });
+                for stream in listener.incoming() {
+                    let stream = stream.expect("Failed to connect to client");
+                    let inbound_packet_processor_clone = inbound_packet_processor.clone();
+                    let messenger_clone = messenger.clone();
+                    let connection_service_clone = connection_service.clone();
+                    let id = uuid::Uuid::new_v4();
+                    let tx = tx.clone();
+                    thread::spawn(move || {
+                        handle_connection(
+                            stream,
+                            inbound_packet_processor_clone,
+                            messenger_clone,
+                            id,
+                            || connection_service_clone.close(id),
+                            tx,
+                        );
+                    });
+                }
             }
         });
 
         // Start a proper server on its own thread
-        std::thread::spawn(move || {
-            server::listen(ipp2, ccs2, msgr2);
+        std::thread::spawn({
+            let inbound_packet_processor = inbound_packet_processor.sender().clone();
+            let messenger = messenger.sender().clone();
+            let connection_service = connection_service.sender().clone();
+            move || {
+                server::listen(inbound_packet_processor.clone(),
+                               connection_service.clone(),
+                               messenger.clone());
+            }
         });
 
         // Ensure some delay to let the server launch
@@ -252,6 +258,7 @@ mod tests {
                 trace!("Connection successful to {}", connection_string);
                 let length: i32 = rx.recv().expect("Failed to receive data from channel");
                 trace!("Received packet length {}", length);
+                assert!(length == 7);
                 stream
                     .shutdown(std::net::Shutdown::Both)
                     .expect("Failed to shutdown connection"); // Everything went OK, close server and client

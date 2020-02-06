@@ -72,6 +72,7 @@ pub fn start<
                             msg.packet.clone(),
                             msg.conn_id,
                             player_state.clone(),
+                            sender.clone(),
                         );
                     }
                 }
@@ -94,6 +95,7 @@ pub fn start<
                                     msg.packet.clone(),
                                     msg.conn_id,
                                     player_state.clone(),
+                                    sender.clone(),
                                 );
                                 if patchwork.maps[anchor.map_index].peer_connection.is_some() {
                                     player_state.reintroduce(msg.conn_id);
@@ -191,6 +193,7 @@ impl Anchor {
 struct Patchwork {
     pub maps: Vec<Map>,
     pub player_anchors: HashMap<Uuid, Anchor>,
+    pub positions: Vec<Position>,
 }
 
 impl Patchwork {
@@ -198,14 +201,22 @@ impl Patchwork {
         let mut patchwork = Patchwork {
             maps: Vec::new(),
             player_anchors: HashMap::new(),
+            // This is a temporary hack to get around the map rendering issue. This is a list of
+            // positions known to render properly
+            positions: vec![
+                Position { x: 1, z: 0 },
+                Position { x: -1, z: 0 },
+                Position { x: 0, z: 0 },
+            ],
         };
         patchwork.create_local_map();
         patchwork
     }
 
     pub fn create_local_map(&mut self) {
+        let next_position = self.next_position();
         self.maps
-            .push(Map::new(self.next_position(), self.next_entity_id_block()));
+            .push(Map::new(next_position, self.next_entity_id_block()));
     }
 
     pub fn position_map_index(self, position: Position) -> usize {
@@ -235,7 +246,8 @@ impl Patchwork {
         inbound_packet_processor: PP,
         patchwork_state: Sender<Operations>,
     ) {
-        let map = Map::new(self.next_position(), self.next_entity_id_block());
+        let next_position = self.next_position();
+        let map = Map::new(next_position, self.next_entity_id_block());
         self.maps.push(map.clone());
         map.connect(
             messenger,
@@ -258,8 +270,9 @@ impl Patchwork {
     }
 
     // For now, just line up all the maps in a row
-    fn next_position(&self) -> Position {
-        let len = self.maps.len() as i32;
-        Position { x: len, z: 0 }
+    fn next_position(&mut self) -> Position {
+        self.positions
+            .pop()
+            .expect("Out of valid positions for maps")
     }
 }

@@ -1,5 +1,6 @@
 use super::constants::SERVER_MAX_CAPACITY;
 use super::interfaces::messenger::{Messenger, SubscriberType};
+
 use super::interfaces::player::{Angle, Operations, Player, Position};
 use super::minecraft_types;
 use super::minecraft_types::float_to_angle;

@@ -37,6 +37,12 @@ packet_boilerplate!(
         ]
     ),
     (
+        3,
+        ChatMessage,
+        0x02,
+        [(message, String)]
+    ),
+    (
         _, //Temporary for border crossing, once it has its own packet change this back to 3
         PlayerPositionAndLook,
         0x11,

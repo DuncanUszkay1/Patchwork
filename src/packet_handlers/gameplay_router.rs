@@ -1,8 +1,15 @@
+use super::chat_message_router;
+use super::interfaces::patchwork::PatchworkState;
 use super::interfaces::player::{Angle, PlayerState, Position};
 use super::packet::Packet;
 use uuid::Uuid;
 
-pub fn route_packet<P: PlayerState>(p: Packet, conn_id: Uuid, player_state: P) {
+pub fn route_packet<P: PlayerState, PA: PatchworkState>(
+    p: Packet,
+    conn_id: Uuid,
+    player_state: P,
+    patchwork_state: PA,
+) {
     match p {
         Packet::PlayerPosition(player_position) => {
             player_state.move_and_look(
@@ -38,6 +45,9 @@ pub fn route_packet<P: PlayerState>(p: Packet, conn_id: Uuid, player_state: P) {
                     pitch: player_look.pitch,
                 }),
             );
+        }
+        Packet::ChatMessage(_) => {
+            chat_message_router::route_packet(p, conn_id, patchwork_state);
         }
         Packet::Unknown => (),
         _ => {

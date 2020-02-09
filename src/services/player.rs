@@ -52,7 +52,6 @@ fn handle_message<M: Messenger>(
                 player,
                 msg.conn_id
             );
-            messenger.send_packet(msg.conn_id, Packet::JoinGame(player.join_game_packet()));
             messenger.send_packet(
                 msg.conn_id,
                 Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_packet()),
@@ -238,8 +237,8 @@ impl Player {
             x: self.position.x,
             y: self.position.y,
             z: self.position.z,
-            yaw: 0.0,
-            pitch: 0.0,
+            yaw: self.angle.yaw,
+            pitch: self.angle.pitch,
             flags: 0,
             teleport_id: 0,
         }

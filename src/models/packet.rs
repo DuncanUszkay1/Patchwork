@@ -182,5 +182,19 @@ packet_boilerplate!(
             (pitch, UByte),
             (on_ground, Boolean)
         ]
+    ),
+    (
+        _,
+        EntityTeleport,
+        0x50,
+        [
+            (entity_id, VarInt, EntityId),
+            (x, Double, XEntity),
+            (y, Double),
+            (z, Double),
+            (yaw, UByte),
+            (pitch, UByte),
+            (on_ground, Boolean)
+        ]
     )
 );

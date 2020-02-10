@@ -27,14 +27,7 @@ pub fn route_packet<
     let st = Status::from_i32(state);
     match st {
         Status::Handshake => handshake::handle_handshake_packet(packet),
-        Status::Login => login::handle_login_packet(
-            packet,
-            conn_id,
-            messenger,
-            player_state,
-            block_state,
-            patchwork_state,
-        ),
+        Status::Login => login::handle_login_packet(packet, conn_id, messenger, player_state),
         Status::ClientPing => {
             client_ping::handle_client_ping_packet(packet, conn_id, messenger, player_state)
         }

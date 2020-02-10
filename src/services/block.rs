@@ -42,7 +42,7 @@ pub fn start<M: Messenger>(
                         chunk_x: 0,
                         chunk_z: 0,
                         full_chunk: true,
-                        primary_bit_mask: 2_i32.pow(3),
+                        primary_bit_mask: 2_i32.pow(4),
                         size: 12291, //I just calculated the length of this hardcoded chunk section
                         data: ChunkSection {
                             bits_per_block: 14,

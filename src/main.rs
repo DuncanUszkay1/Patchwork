@@ -45,7 +45,7 @@ fn main() {
         (
             module: services::player::start,
             name: player_state,
-            dependencies: [messenger]
+            dependencies: [messenger, block_state, patchwork_state]
         ),
         (
             module: services::block::start,

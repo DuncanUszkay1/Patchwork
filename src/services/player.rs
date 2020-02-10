@@ -1,22 +1,26 @@
 use super::constants::SERVER_MAX_CAPACITY;
+use super::interfaces::block::BlockState;
 use super::interfaces::messenger::{Messenger, SubscriberType};
-
+use super::interfaces::patchwork::PatchworkState;
 use super::interfaces::player::{Angle, Operations, Player, Position};
 use super::minecraft_types;
 use super::minecraft_types::float_to_angle;
 use super::packet::{
     BorderCrossLogin, ClientboundPlayerPositionAndLook, DestroyEntities, EntityHeadLook,
-    EntityLookAndMove, JoinGame, Packet, PlayerInfo, SpawnPlayer, StatusResponse,
+    EntityLookAndMove, EntityTeleport, JoinGame, Packet, PlayerInfo, SpawnPlayer, StatusResponse,
 };
+use super::packet_handlers::initiation_protocols::login;
 use std::collections::HashMap;
 
 use std::sync::mpsc::{Receiver, Sender};
 use uuid::Uuid;
 
-pub fn start<M: Messenger + Clone>(
+pub fn start<M: Messenger + Clone, B: BlockState + Clone, PA: PatchworkState + Clone>(
     receiver: Receiver<Operations>,
-    _sender: Sender<Operations>,
+    sender: Sender<Operations>,
     messenger: M,
+    block_state: B,
+    patchwork_state: PA,
 ) {
     let mut players = HashMap::<Uuid, Player>::new();
     let mut entity_conn_ids = HashMap::<i32, Uuid>::new();
@@ -29,16 +33,22 @@ pub fn start<M: Messenger + Clone>(
             &mut entity_conn_ids,
             &mut entity_id,
             messenger.clone(),
+            sender.clone(),
+            block_state.clone(),
+            patchwork_state.clone(),
         )
     }
 }
 
-fn handle_message<M: Messenger>(
+fn handle_message<M: Messenger + Clone, B: BlockState + Clone, PA: PatchworkState + Clone>(
     msg: Operations,
     players: &mut HashMap<Uuid, Player>,
     entity_conn_ids: &mut HashMap<i32, Uuid>,
     entity_id: &mut i32,
     messenger: M,
+    sender: Sender<Operations>,
+    block_state: B,
+    patchwork_state: PA,
 ) {
     match msg {
         Operations::New(msg) => {
@@ -52,10 +62,6 @@ fn handle_message<M: Messenger>(
                 player,
                 msg.conn_id
             );
-            messenger.send_packet(
-                msg.conn_id,
-                Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_packet()),
-            );
             messenger.broadcast(
                 Packet::PlayerInfo(player.player_info_packet()),
                 Some(msg.conn_id),
@@ -68,6 +74,17 @@ fn handle_message<M: Messenger>(
             );
             entity_conn_ids.insert(player.entity_id, msg.conn_id);
             players.insert(msg.conn_id, player);
+        }
+        Operations::Login(msg) => {
+            if let Some(player) = players.get(&msg.conn_id) {
+                login::initialize_world(
+                    player.clone(),
+                    messenger.clone(),
+                    sender.clone(),
+                    block_state.clone(),
+                    patchwork_state.clone(),
+                );
+            }
         }
         Operations::Delete(msg) => {
             if let Some(player) = players.remove(&msg.conn_id) {
@@ -89,9 +106,7 @@ fn handle_message<M: Messenger>(
             );
             players.entry(msg.conn_id).and_modify(|player| {
                 messenger.broadcast(
-                    Packet::EntityLookAndMove(
-                        player.move_and_look(msg.new_position, msg.new_angle),
-                    ),
+                    player.move_and_look(msg.new_position, msg.new_angle),
                     Some(player.conn_id),
                     SubscriberType::All,
                 );
@@ -209,11 +224,11 @@ impl Player {
         &mut self,
         new_position: Option<Position>,
         new_angle: Option<Angle>,
-    ) -> EntityLookAndMove {
+    ) -> Packet {
         if let Some(new_angle) = new_angle {
             self.angle = new_angle;
         }
-        let update_packet = self.entity_look_and_move_packet(new_position);
+        let update_packet = self.entity_displacement_packet(new_position);
         if let Some(new_position) = new_position {
             self.position = new_position;
         }
@@ -237,8 +252,8 @@ impl Player {
             x: self.position.x,
             y: self.position.y,
             z: self.position.z,
-            yaw: self.angle.yaw,
-            pitch: self.angle.pitch,
+            yaw: 0.0,
+            pitch: 0.0,
             flags: 0,
             teleport_id: 0,
         }
@@ -251,16 +266,30 @@ impl Player {
         }
     }
 
-    fn entity_look_and_move_packet(&self, new_position: Option<Position>) -> EntityLookAndMove {
+    fn entity_displacement_packet(&self, new_position: Option<Position>) -> Packet {
         let position_delta = PositionDelta::new(self.position, new_position);
-        EntityLookAndMove {
-            entity_id: self.entity_id,
-            delta_x: position_delta.x,
-            delta_y: position_delta.y,
-            delta_z: position_delta.z,
-            yaw: float_to_angle(self.angle.yaw),
-            pitch: float_to_angle(self.angle.pitch),
-            on_ground: false,
+        if position_distance(self.position, new_position) >= 8.0 {
+            let new_position =
+                new_position.expect("if we moved more than 8 blocks we must have moved");
+            Packet::EntityTeleport(EntityTeleport {
+                entity_id: self.entity_id,
+                x: new_position.x,
+                y: new_position.y,
+                z: new_position.z,
+                yaw: float_to_angle(self.angle.yaw),
+                pitch: float_to_angle(self.angle.pitch),
+                on_ground: false,
+            })
+        } else {
+            Packet::EntityLookAndMove(EntityLookAndMove {
+                entity_id: self.entity_id,
+                delta_x: position_delta.x,
+                delta_y: position_delta.y,
+                delta_z: position_delta.z,
+                yaw: float_to_angle(self.angle.yaw),
+                pitch: float_to_angle(self.angle.pitch),
+                on_ground: false,
+            })
         }
     }
 
@@ -308,5 +337,15 @@ impl PositionDelta {
             },
             None => PositionDelta { x: 0, y: 0, z: 0 },
         }
+    }
+}
+
+fn position_distance(old_position: Position, new_position: Option<Position>) -> f64 {
+    match new_position {
+        Some(position) => ((old_position.x - position.x).powf(2.0)
+            + (old_position.y - position.y).powf(2.0)
+            + (old_position.z - position.z).powf(2.0))
+        .sqrt(),
+        None => 0.0,
     }
 }

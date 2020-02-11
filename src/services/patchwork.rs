@@ -193,7 +193,7 @@ impl Anchor {
 struct Patchwork {
     pub maps: Vec<Map>,
     pub player_anchors: HashMap<Uuid, Anchor>,
-    pub positions: Vec<Position>,
+    pub last_position: Position,
 }
 
 impl Patchwork {
@@ -201,13 +201,7 @@ impl Patchwork {
         let mut patchwork = Patchwork {
             maps: Vec::new(),
             player_anchors: HashMap::new(),
-            // This is a temporary hack to get around the map rendering issue. This is a list of
-            // positions known to render properly
-            positions: vec![
-                Position { x: 1, z: 0 },
-                Position { x: -1, z: 0 },
-                Position { x: 0, z: 0 },
-            ],
+            last_position: Position{ x: 0, z: 0 }
         };
         patchwork.create_local_map();
         patchwork
@@ -271,8 +265,35 @@ impl Patchwork {
 
     // For now, just line up all the maps in a row
     fn next_position(&mut self) -> Position {
-        self.positions
-            .pop()
-            .expect("Out of valid positions for maps")
+        let len = self.maps.len() as i32;
+        match len % 2 {
+            0 => Position { x: len/2, z: 0 },
+            1 => Position { x: -(len + 1)/2, z: 0 },
+            _ => panic!("math has abandoned us")
+        }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

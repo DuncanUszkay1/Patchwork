@@ -41,6 +41,7 @@ fn main() {
 
     SimpleLogger::init(level, logger_config).unwrap();
 
+    //trace_macros!(true);
     define_services!(
         (
             module: services::player::start,
@@ -60,12 +61,14 @@ fn main() {
         (
             module: services::messenger::start,
             name: messenger,
-            dependencies: []
+            dependencies: [],
+            extras: [None]
         ),
         (
             module: services::packet_processor::start_inbound,
             name: inbound_packet_processor,
-            dependencies: [messenger, player_state, block_state, patchwork_state]
+            dependencies: [messenger, player_state, block_state, patchwork_state],
+            extras: [None]
         ),
         (
             module: services::connection::start,
@@ -78,6 +81,7 @@ fn main() {
             dependencies: [messenger]
         )
     );
+    //trace_macros!(false);
 
     trace!("Services Started");
 
@@ -99,10 +103,6 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::interfaces::connection::ConnectionService;
-    use crate::interfaces::messenger::Messenger;
-    use crate::interfaces::packet_processor::PacketProcessor;
-    use crate::models::minecraft_protocol::MinecraftProtocolReader;
     use crate::*;
 
     fn start_trace() {
@@ -114,39 +114,19 @@ mod tests {
         SimpleLogger::init(LevelFilter::Trace, logger_config).unwrap();
     }
 
-    fn handle_connection<M: Messenger, PP: PacketProcessor, F: Fn()>(
-        mut stream: std::net::TcpStream,
-        inbound_packet_processor: PP,
-        messenger: M,
-        id: uuid::Uuid,
-        on_closure: F,
-        sx: std::sync::mpsc::Sender<i32>,
-    ) {
-        let stream_clone = stream.try_clone().expect("Failed to clone stream");
-        messenger.new_connection(id, stream_clone);
-        loop {
-            match stream.try_read_var_int() {
-                Ok(length) => {
-                    sx.send(length).expect("Failed to send data to channel");
-                }
-                Err(e) => {
-                    match e.kind() {
-                        std::io::ErrorKind::UnexpectedEof => on_closure(),
-                        std::io::ErrorKind::ConnectionReset => on_closure(),
-                        _ => {
-                            panic!("Connection closed due to {:?}", e);
-                        }
-                    };
-                    break;
-                }
-            }
-        }
-    }
-
     #[test]
     fn test() {
         start_trace();
 
+        // Since servers handle connection in their own thread, create a channel
+        // to retrieve information
+        let (router_sender, router_receiver) = std::sync::mpsc::channel();
+        let optional_router_sender = Some(router_sender.clone());
+
+        let (messenger_sender, messenger_receiver) = std::sync::mpsc::channel();
+        let optional_messenger_sender = Some(messenger_sender.clone());
+
+        //trace_macros!(true);
         define_services!(
             (
                 module: services::player::start,
@@ -166,12 +146,14 @@ mod tests {
             (
                 module: services::messenger::start,
                 name: messenger,
-                dependencies: []
+                dependencies: [],
+                extras: [optional_messenger_sender]
             ),
             (
                 module: services::packet_processor::start_inbound,
                 name: inbound_packet_processor,
-                dependencies: [messenger, player_state, block_state, patchwork_state]
+                dependencies: [messenger, player_state, block_state, patchwork_state],
+                extras: [optional_router_sender]
             ),
             (
                 module: services::connection::start,
@@ -184,88 +166,28 @@ mod tests {
                 dependencies: [messenger]
             )
         );
+        //trace_macros!(false);
         trace!("Services Started");
 
-        // Temporary, maybe set them through CLI
-        std::env::set_var("PORT", "8600");
-        std::env::set_var("PEER_PORT", "8601");
-
-        let address = String::from("127.0.0.1");
-        let port = std::env::var("PORT").unwrap().parse::<u16>().unwrap();
+        // the stuff below this should also probably be moved to a service model
+        let peer_address = String::from("127.0.0.1");
         let peer_port = std::env::var("PEER_PORT").unwrap().parse::<u16>().unwrap();
 
         patchwork_state.sender().new_map(models::map::Peer {
-            port: peer_port.clone(),
-            address: address.clone(),
+            port: peer_port,
+            address: peer_address,
         });
 
-        // Since servers handle connection in their own thread, create a channel
-        // to retrieve information
-        let (tx, rx) = std::sync::mpsc::channel();
-
-        // Start a dummy peer server (although manually, it is the same code as server::listen(),
-        // what's been added is the interaction with the channel)
-        let connection_string = format!("{}:{}", address, peer_port);
-
-        std::thread::spawn({
-            let connection_string = connection_string.clone();
-            let inbound_packet_processor = inbound_packet_processor.sender().clone();
-            let messenger = messenger.sender().clone();
-            let connection_service = connection_service.sender().clone();
-            let tx = tx.clone();
-            move || {
-                let listener = std::net::TcpListener::bind(connection_string.clone())
-                    .expect("Failed to bind socket");
-                trace!("Listening on {:?}", connection_string);
-
-                for stream in listener.incoming() {
-                    let stream = stream.expect("Failed to connect to client");
-                    let inbound_packet_processor_clone = inbound_packet_processor.clone();
-                    let messenger_clone = messenger.clone();
-                    let connection_service_clone = connection_service.clone();
-                    let id = uuid::Uuid::new_v4();
-                    let tx = tx.clone();
-                    thread::spawn(move || {
-                        handle_connection(
-                            stream,
-                            inbound_packet_processor_clone,
-                            messenger_clone,
-                            id,
-                            || connection_service_clone.close(id),
-                            tx,
-                        );
-                    });
-                }
-            }
+        std::thread::spawn(move || {
+            server::listen(
+            inbound_packet_processor.sender(),
+            connection_service.sender(),
+            messenger.sender(),
+            );
         });
 
-        // Start a proper server on its own thread
-        std::thread::spawn({
-            let inbound_packet_processor = inbound_packet_processor.sender().clone();
-            let messenger = messenger.sender().clone();
-            let connection_service = connection_service.sender().clone();
-            move || {
-                server::listen(inbound_packet_processor.clone(),
-                               connection_service.clone(),
-                               messenger.clone());
-            }
-        });
-
-        // Ensure some delay to let the server launch
-        std::thread::sleep(std::time::Duration::from_millis(100));
-        match std::net::TcpStream::connect(connection_string.clone()) {
-            Ok(stream) => {
-                trace!("Connection successful to {}", connection_string);
-                let length: i32 = rx.recv().expect("Failed to receive data from channel");
-                trace!("Received packet length {}", length);
-                assert!(length == 7);
-                stream
-                    .shutdown(std::net::Shutdown::Both)
-                    .expect("Failed to shutdown connection"); // Everything went OK, close server and client
-            }
-            Err(_why) => {
-                panic!("Failed to connect to {}", connection_string);
-            }
+        while let Ok((state, packet)) = router_receiver.recv() {
+            trace!("==[Received]== {:?}, {:?}", state, packet);
         }
     }
 }

@@ -4,7 +4,7 @@ use super::interfaces::packet_processor::Operations;
 use super::interfaces::patchwork::PatchworkState;
 use super::interfaces::player::PlayerState;
 
-use super::packet::{read, translate};
+use super::packet::{read, translate, Packet};
 use super::packet_handlers::packet_router;
 use super::translation::{TranslationInfo, TranslationUpdates};
 use std::collections::HashMap;
@@ -24,6 +24,7 @@ pub fn start_inbound<
     player_state: P,
     block_state: B,
     patchwork_state: PA,
+    test_sender: Option<std::sync::mpsc::Sender<(i32, Packet)>>,
 ) {
     let mut translation_data = HashMap::<Uuid, TranslationInfo>::new();
 
@@ -37,6 +38,16 @@ pub fn start_inbound<
 
                 let packet = read(&mut msg.cursor.clone(), translation_data.state);
                 let packet = translate(packet, translation_data.clone());
+
+                // Send raw packet info if we provided a channel
+                let test_sender_clone = test_sender.clone();
+                match test_sender_clone {
+                    Some(test_sender_clone) => test_sender_clone
+                        .send((translation_data.state.clone(), packet.clone()))
+                        .expect("Failed to send packet to channel"),
+                    _ => {}
+                }
+
                 let translation_update = packet_router::route_packet(
                     packet,
                     translation_data.state,

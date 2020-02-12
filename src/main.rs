@@ -171,9 +171,9 @@ mod tests {
 
         std::thread::spawn(move || {
             server::listen(
-            inbound_packet_processor.sender(),
-            connection_service.sender(),
-            messenger.sender(),
+                inbound_packet_processor.sender(),
+                connection_service.sender(),
+                messenger.sender(),
             );
         });
 

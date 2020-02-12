@@ -41,11 +41,10 @@ pub fn start_inbound<
 
                 // Send raw packet info if we provided a channel
                 let test_sender_clone = test_sender.clone();
-                match test_sender_clone {
-                    Some(test_sender_clone) => test_sender_clone
-                        .send((translation_data.state.clone(), packet.clone()))
-                        .expect("Failed to send packet to channel"),
-                    _ => {}
+                if let Some(test_sender_clone) = test_sender_clone {
+                    test_sender_clone
+                        .send((translation_data.state, packet.clone()))
+                        .expect("Failed to send packet to channel");
                 }
 
                 let translation_update = packet_router::route_packet(

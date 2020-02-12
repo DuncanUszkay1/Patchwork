@@ -60,8 +60,7 @@ fn main() {
         (
             module: services::messenger::start,
             name: messenger,
-            dependencies: [],
-            extras: [None]
+            dependencies: []
         ),
         (
             module: services::packet_processor::start_inbound,
@@ -121,9 +120,6 @@ mod tests {
         let (router_sender, router_receiver) = std::sync::mpsc::channel();
         let optional_router_sender = Some(router_sender.clone());
 
-        let (messenger_sender, messenger_receiver) = std::sync::mpsc::channel();
-        let optional_messenger_sender = Some(messenger_sender.clone());
-
         define_services!(
             (
                 module: services::player::start,
@@ -143,8 +139,7 @@ mod tests {
             (
                 module: services::messenger::start,
                 name: messenger,
-                dependencies: [],
-                extras: [optional_messenger_sender]
+                dependencies: []
             ),
             (
                 module: services::packet_processor::start_inbound,

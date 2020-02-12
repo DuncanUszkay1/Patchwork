@@ -41,7 +41,6 @@ fn main() {
 
     SimpleLogger::init(level, logger_config).unwrap();
 
-    //trace_macros!(true);
     define_services!(
         (
             module: services::player::start,
@@ -81,7 +80,6 @@ fn main() {
             dependencies: [messenger]
         )
     );
-    //trace_macros!(false);
 
     trace!("Services Started");
 
@@ -126,7 +124,6 @@ mod tests {
         let (messenger_sender, messenger_receiver) = std::sync::mpsc::channel();
         let optional_messenger_sender = Some(messenger_sender.clone());
 
-        //trace_macros!(true);
         define_services!(
             (
                 module: services::player::start,
@@ -166,7 +163,6 @@ mod tests {
                 dependencies: [messenger]
             )
         );
-        //trace_macros!(false);
         trace!("Services Started");
 
         // the stuff below this should also probably be moved to a service model

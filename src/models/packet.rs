@@ -32,7 +32,7 @@ packet_boilerplate!(
         [
             (x, Double, XEntity),
             (feet_y, Double),
-            (z, Double),
+            (z, Double, ZEntity),
             (on_ground, Boolean)
         ]
     ),
@@ -49,7 +49,7 @@ packet_boilerplate!(
         [
             (x, Double, XEntity),
             (feet_y, Double),
-            (z, Double),
+            (z, Double, ZEntity),
             (yaw, Float),
             (pitch, Float),
             (on_ground, Boolean)
@@ -69,7 +69,7 @@ packet_boilerplate!(
     (_, BorderCrossLogin, 0xA0, [
             (x, Double, XEntity),
             (feet_y, Double),
-            (z, Double),
+            (z, Double, ZEntity),
             (yaw, Float),
             (pitch, Float),
             (on_ground, Boolean),
@@ -113,7 +113,7 @@ packet_boilerplate!(
         0x22,
         [
             (chunk_x, Int, XChunk),
-            (chunk_z, Int),
+            (chunk_z, Int, ZChunk),
             (full_chunk, Boolean), //always true
             (primary_bit_mask, VarInt),
             (size, VarInt),
@@ -146,7 +146,7 @@ packet_boilerplate!(
             (uuid, u128),
             (x, Double, XEntity),
             (y, Double),
-            (z, Double),
+            (z, Double, ZEntity),
             (yaw, UByte), // represents angle * (360/256). Might want to eventually make this its own type
             (pitch, UByte),
             (entity_metadata_terminator, UByte)  // always 0xff until we implement entity metadata
@@ -191,7 +191,7 @@ packet_boilerplate!(
             (entity_id, VarInt, EntityId),
             (x, Double, XEntity),
             (y, Double),
-            (z, Double),
+            (z, Double, ZEntity),
             (yaw, UByte),
             (pitch, UByte),
             (on_ground, Boolean)

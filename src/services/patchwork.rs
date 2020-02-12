@@ -193,7 +193,8 @@ impl Anchor {
 struct Patchwork {
     pub maps: Vec<Map>,
     pub player_anchors: HashMap<Uuid, Anchor>,
-    pub last_position: Position,
+    pub next_position: Position,
+    pub map_placement_direction: Direction,
 }
 
 impl Patchwork {
@@ -201,7 +202,8 @@ impl Patchwork {
         let mut patchwork = Patchwork {
             maps: Vec::new(),
             player_anchors: HashMap::new(),
-            last_position: Position{ x: 0, z: 0 }
+            next_position: Position { x: 0, z: 0 },
+            map_placement_direction: Direction::ZNegative,
         };
         patchwork.create_local_map();
         patchwork
@@ -265,35 +267,56 @@ impl Patchwork {
 
     // For now, just line up all the maps in a row
     fn next_position(&mut self) -> Position {
-        let len = self.maps.len() as i32;
-        match len % 2 {
-            0 => Position { x: len/2, z: 0 },
-            1 => Position { x: -(len + 1)/2, z: 0 },
-            _ => panic!("math has abandoned us")
+        let ret = self.next_position;
+        if self.next_position.x == self.next_position.z
+            || (-self.next_position.x == self.next_position.z && self.next_position.x < 0)
+            || (self.next_position.x > 0 && self.next_position.x == -self.next_position.z + 1)
+        {
+            self.map_placement_direction = self.map_placement_direction.turn();
         }
+        self.next_position = self
+            .map_placement_direction
+            .shift_position(self.next_position);
+        ret
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum Direction {
+    XPositive,
+    ZPositive,
+    XNegative,
+    ZNegative,
+}
 
+impl Direction {
+    fn turn(self) -> Direction {
+        match self {
+            Direction::XPositive => Direction::ZPositive,
+            Direction::ZPositive => Direction::XNegative,
+            Direction::XNegative => Direction::ZNegative,
+            Direction::ZNegative => Direction::XPositive,
+        }
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    fn shift_position(&self, position: Position) -> Position {
+        match self {
+            Direction::XPositive => Position {
+                x: position.x + 1,
+                z: position.z,
+            },
+            Direction::ZPositive => Position {
+                x: position.x,
+                z: position.z + 1,
+            },
+            Direction::XNegative => Position {
+                x: position.x - 1,
+                z: position.z,
+            },
+            Direction::ZNegative => Position {
+                x: position.x,
+                z: position.z - 1,
+            },
+        }
+    }
+}

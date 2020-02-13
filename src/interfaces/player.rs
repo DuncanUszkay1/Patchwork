@@ -7,6 +7,7 @@ define_interface!(
     PlayerState,
     (Report, report, [conn_id: Uuid]),
     (New, new_player, [conn_id: Uuid, player: Player]),
+    (Login, login, [conn_id: Uuid]),
     (Delete, delete_player, [conn_id: Uuid]),
     (
         MoveAndLook,
@@ -61,7 +62,7 @@ pub struct Position {
     pub z: f64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Angle {
     pub pitch: f32,
     pub yaw: f32,

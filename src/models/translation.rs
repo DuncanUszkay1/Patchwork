@@ -5,6 +5,7 @@ pub enum TranslationUpdates {
     State(i32),
     EntityIdBlock(i32),
     XOrigin(i32),
+    ZOrigin(i32),
     NoChange,
 }
 
@@ -32,6 +33,9 @@ impl TranslationInfo {
             }
             TranslationUpdates::XOrigin(x) => {
                 self.map.position.x = *x;
+            }
+            TranslationUpdates::ZOrigin(z) => {
+                self.map.position.z = *z;
             }
             TranslationUpdates::NoChange => {}
         }

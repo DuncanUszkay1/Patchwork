@@ -75,6 +75,7 @@ impl Map {
             TranslationUpdates::State(5),
             TranslationUpdates::EntityIdBlock(self.entity_id_block),
             TranslationUpdates::XOrigin(self.position.x),
+            TranslationUpdates::ZOrigin(self.position.z),
         ];
         let peer_clone = peer.clone();
         let on_connection = move |stream: TcpStream| {

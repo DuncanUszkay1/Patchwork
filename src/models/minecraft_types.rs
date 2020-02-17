@@ -4,7 +4,7 @@ pub fn float_to_angle(f: f32) -> u8 {
     ((f / 360.0) * 256.0) as u8
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ChunkSection {
     pub bits_per_block: u8, //always 14 until we implement palettes
     pub data_array_length: i32,

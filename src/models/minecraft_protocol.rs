@@ -218,6 +218,9 @@ fn read_var_int<S: Read>(stream: &mut S) -> Result<i32, Error> {
 }
 
 fn write_var_int<S: Write>(stream: &mut S, v: i32) {
+    if v < 0 {
+        panic!("Tried to write negative VarInt {:?}", v);
+    }
     let mut value = v;
     loop {
         let mut temp = value & 0b0111_1111;
@@ -299,5 +302,102 @@ fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
         block_ids,
         block_light: Vec::<u64>::new(),
         sky_light: Vec::<u64>::new(),
+    }
+}
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chunk_section_reading() {
+        //Fill block ids with arbitrary pattern
+        let mut block_ids = Vec::new();
+        for _ in 0..256 {
+            block_ids.push(108)
+        }
+        for y in 1..16 {
+            for z in 0..16 {
+                for x in 0..16 {
+                    block_ids.push(x + y + z)
+                }
+            }
+        }
+
+        let chunk_section = ChunkSection {
+            bits_per_block: 14,
+            data_array_length: 896,
+            block_ids,
+            block_light: Vec::new(),
+            sky_light: Vec::new(),
+        };
+
+        let mut stream = Vec::<u8>::new();
+        stream.write_chunk_section(chunk_section.clone());
+
+        // TODO compare this to an expected chunk section (too big to copy paste here)
+
+        let mut stream = std::io::Cursor::new(stream);
+        assert_eq!(chunk_section, stream.read_chunk_section());
+    }
+
+    #[test]
+    fn test_write_var_int() {
+        //0
+        let mut stream = Vec::<u8>::new();
+        stream.write_var_int(0);
+        assert_eq!(vec![0], stream);
+
+        //7 bit max
+        stream.clear();
+        stream.write_var_int(0b1111111);
+        assert_eq!(vec![0b1111111], stream);
+
+        //8 bits
+        stream.clear();
+        stream.write_var_int(0b11111111);
+        assert_eq!(vec![0b11111111, 0b1], stream);
+
+        //int max
+        stream.clear();
+        stream.write_var_int(std::i32::MAX);
+        assert_eq!(vec![255, 255, 255, 255, 7], stream);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_write_var_int_negative() {
+        //negative
+        let mut stream = Vec::<u8>::new();
+        stream.write_var_int(std::i32::MIN);
+    }
+
+    #[test]
+    fn test_read_var_int() {
+        //0
+        let mut stream = std::io::Cursor::new(vec![0]);
+        assert_eq!(0, read_var_int(&mut stream).unwrap());
+
+        //7 bit max
+        let mut stream = std::io::Cursor::new(vec![0b1111111]);
+        assert_eq!(0b1111111, read_var_int(&mut stream).unwrap());
+
+        //8 bits
+        let mut stream = std::io::Cursor::new(vec![0b11111111, 0b1]);
+        assert_eq!(0b11111111, read_var_int(&mut stream).unwrap());
+
+        //int max
+        let mut stream = std::io::Cursor::new(vec![255, 255, 255, 255, 7]);
+        assert_eq!(std::i32::MAX, read_var_int(&mut stream).unwrap());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_read_var_int_too_big() {
+        //int max
+        let mut stream = std::io::Cursor::new(vec![255, 255, 255, 255, 255]);
+        read_var_int(&mut stream).unwrap();
     }
 }

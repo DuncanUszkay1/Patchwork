@@ -196,6 +196,9 @@ macro_rules! mc_to_rust_datatype {
     (ChunkSection) => {
         ChunkSection
     };
+    (BlockPosition) => {
+        BlockPosition
+    };
 }
 
 macro_rules! read_packet_field {
@@ -245,6 +248,9 @@ macro_rules! read_packet_field {
     ($stream:ident, ChunkSection) => {
         $stream.read_chunk_section()
     };
+    ($stream:ident, BlockPosition) => {
+        $stream.read_position()
+    };
 }
 
 macro_rules! write_packet_field {
@@ -293,6 +299,9 @@ macro_rules! write_packet_field {
     };
     ($stream:ident, $value:expr, ChunkSection) => {
         $stream.write_chunk_section($value)
+    };
+    ($stream:ident, $value:expr, BlockPosition) => {
+        $stream.write_position($value)
     };
 }
 

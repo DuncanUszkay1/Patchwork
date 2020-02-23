@@ -2,7 +2,7 @@
 //The macro is much cleaner if we allow for unused variables
 use super::constants::{CHUNK_SIZE, ENTITY_ID_BLOCK_SIZE};
 use super::minecraft_protocol::{MinecraftProtocolReader, MinecraftProtocolWriter};
-use super::minecraft_types::ChunkSection;
+use super::minecraft_types::{BlockPosition, ChunkSection};
 use super::translation::TranslationInfo;
 use std::any::type_name;
 use std::io::{Cursor, Read, Write};
@@ -195,6 +195,25 @@ packet_boilerplate!(
             (yaw, UByte),
             (pitch, UByte),
             (on_ground, Boolean)
+        ]
+    ),
+    (
+        6,
+        BlockChange, // clientbound
+        0x0b,
+        [
+            (location, BlockPosition),
+            (block_id, VarInt)
+        ]
+    ),
+    (
+        6,
+        PlayerDigging, // serverbound
+        0x18,
+        [
+            (status, VarInt),
+            (location, BlockPosition),
+            (face, Byte)
         ]
     )
 );

@@ -1,14 +1,16 @@
 use super::chat_message_router;
+use super::interfaces::block::BlockState;
 use super::interfaces::patchwork::PatchworkState;
 use super::interfaces::player::{Angle, PlayerState, Position};
 use super::packet::Packet;
 use uuid::Uuid;
 
-pub fn route_packet<P: PlayerState, PA: PatchworkState>(
+pub fn route_packet<P: PlayerState, PA: PatchworkState, B: BlockState>(
     p: Packet,
     conn_id: Uuid,
     player_state: P,
     patchwork_state: PA,
+    block_state: B,
 ) {
     match p {
         Packet::PlayerPosition(player_position) => {
@@ -48,6 +50,14 @@ pub fn route_packet<P: PlayerState, PA: PatchworkState>(
         }
         Packet::ChatMessage(_) => {
             chat_message_router::route_packet(p, conn_id, patchwork_state);
+        }
+        Packet::PlayerDigging(block_packet) => {
+            println!("PlayerDigging from gameplay_router");
+            block_state.break_block_serverbound(conn_id, block_packet);
+        }
+        Packet::BlockChange(block_packet) => {
+            println!("BlockChange from gameplay_router");
+            block_state.break_block_clientbound(conn_id, block_packet);
         }
         Packet::Unknown => (),
         _ => {

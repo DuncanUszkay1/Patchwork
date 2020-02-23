@@ -1,3 +1,4 @@
+use super::interfaces::block::BlockState;
 use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
 use super::interfaces::patchwork::Operations;
@@ -18,12 +19,14 @@ pub fn start<
     M: 'static + Messenger + Clone + Send,
     P: PlayerState + Clone,
     PP: 'static + PacketProcessor + Clone + Send,
+    B: BlockState + Clone,
 >(
     receiver: Receiver<Operations>,
     sender: Sender<Operations>,
     messenger: M,
     inbound_packet_processor: PP,
     player_state: P,
+    block_state: B,
 ) {
     let mut patchwork = Patchwork::new();
 
@@ -73,6 +76,7 @@ pub fn start<
                             msg.conn_id,
                             player_state.clone(),
                             sender.clone(),
+                            block_state.clone(),
                         );
                     }
                 }
@@ -96,6 +100,7 @@ pub fn start<
                                     msg.conn_id,
                                     player_state.clone(),
                                     sender.clone(),
+                                    block_state.clone(),
                                 );
                                 if patchwork.maps[anchor.map_index].peer_connection.is_some() {
                                     player_state.reintroduce(msg.conn_id);

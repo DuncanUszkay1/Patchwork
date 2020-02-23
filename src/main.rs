@@ -55,7 +55,7 @@ fn main() {
         (
             module: services::patchwork::start,
             name: patchwork_state,
-            dependencies: [messenger, inbound_packet_processor, player_state]
+            dependencies: [messenger, inbound_packet_processor, player_state, block_state]
         ),
         (
             module: services::messenger::start,

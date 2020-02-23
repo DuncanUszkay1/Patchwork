@@ -43,3 +43,10 @@ pub struct StatusResponse {
     pub players: PingPlayersInfo,
     pub description: Description,
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct BlockPosition {
+    pub x: u32,
+    pub y: u16,
+    pub z: u32,
+}

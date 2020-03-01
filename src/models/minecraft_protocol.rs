@@ -1,6 +1,6 @@
 extern crate byteorder;
 
-use super::minecraft_types::ChunkSection;
+use super::minecraft_types::{BlockPosition, ChunkSection};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::cmp::{max, min};
 use std::io::{Error, Read, Write};
@@ -9,6 +9,7 @@ const PALETTE_SIZE: i64 = 14; // We don't define our own palette, so we just use
 
 pub trait MinecraftProtocolReader {
     fn read_unsigned_short(&mut self) -> u16;
+    fn read_unsigned_long(&mut self) -> u64;
     fn read_short(&mut self) -> i16;
     fn read_var_int(&mut self) -> i32;
     fn try_read_var_int(&mut self) -> Result<i32, Error>;
@@ -24,11 +25,13 @@ pub trait MinecraftProtocolReader {
     fn read_byte(&mut self) -> i8;
     fn read_u_byte(&mut self) -> u8;
     fn read_boolean(&mut self) -> bool;
+    fn read_position(&mut self) -> BlockPosition;
 }
 
 pub trait MinecraftProtocolWriter {
     fn write_long(&mut self, v: i64);
     fn write_unsigned_short(&mut self, v: u16);
+    fn write_unsigned_long(&mut self, v: u64);
     fn write_short(&mut self, v: i16);
     fn write_var_int(&mut self, v: i32);
     fn write_string(&mut self, v: String);
@@ -42,6 +45,7 @@ pub trait MinecraftProtocolWriter {
     fn write_byte(&mut self, v: i8);
     fn write_u_byte(&mut self, v: u8);
     fn write_boolean(&mut self, v: bool);
+    fn write_position(&mut self, v: BlockPosition);
 }
 
 impl<T: Read> MinecraftProtocolReader for T {
@@ -59,6 +63,10 @@ impl<T: Read> MinecraftProtocolReader for T {
 
     fn read_unsigned_short(&mut self) -> u16 {
         self.read_u16::<BigEndian>().unwrap()
+    }
+
+    fn read_unsigned_long(&mut self) -> u64 {
+        self.read_u64::<BigEndian>().unwrap()
     }
 
     fn read_short(&mut self) -> i16 {
@@ -127,6 +135,10 @@ impl<T: Read> MinecraftProtocolReader for T {
             }
         }
     }
+
+    fn read_position(&mut self) -> BlockPosition {
+        read_position(self)
+    }
 }
 
 impl<T: Write> MinecraftProtocolWriter for T {
@@ -140,6 +152,10 @@ impl<T: Write> MinecraftProtocolWriter for T {
 
     fn write_unsigned_short(&mut self, v: u16) {
         self.write_u16::<BigEndian>(v).unwrap()
+    }
+
+    fn write_unsigned_long(&mut self, v: u64) {
+        self.write_u64::<BigEndian>(v).unwrap();
     }
 
     fn write_short(&mut self, v: i16) {
@@ -195,6 +211,10 @@ impl<T: Write> MinecraftProtocolWriter for T {
         } else {
             self.write_u8(0).unwrap()
         }
+    }
+
+    fn write_position(&mut self, v: BlockPosition) {
+        write_position(self, v);
     }
 }
 
@@ -302,6 +322,32 @@ fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
         block_ids,
         block_light: Vec::<u64>::new(),
         sky_light: Vec::<u64>::new(),
+    }
+}
+
+fn write_position<S: Write>(stream: &mut S, v: BlockPosition) {
+    let x = ((u64::from(v.x) & 0x03FF_FFFF) << 38);
+    let z = (u64::from(v.z) & 0x03FF_FFFF);
+    let y = (u64::from(v.y) & 0xFFF) << 26;
+
+
+    let mut encoded_position = x | y | z;
+    let x = encoded_position >> 38;
+    let y = (encoded_position & 0x0000003FFc000000) >> 26;
+    let z = (encoded_position & 0x0000000003FFFFFF);
+
+    stream.write_unsigned_long(encoded_position);
+}
+
+fn read_position<S: Read>(stream: &mut S) -> BlockPosition {
+    let encoded_position = stream.read_unsigned_long();
+    let x = encoded_position >> 38;
+    let y = (encoded_position & 0x0000003FFc000000) >> 26;
+    let z = (encoded_position & 0x0000000003FFFFFF);
+    BlockPosition {
+        x: (x as u32),
+        y: (y as u32),
+        z: (z as u32),
     }
 }
 

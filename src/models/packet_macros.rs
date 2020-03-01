@@ -196,6 +196,9 @@ macro_rules! mc_to_rust_datatype {
     (ChunkSection) => {
         ChunkSection
     };
+    (BlockPosition) => {
+        BlockPosition
+    };
 }
 
 macro_rules! read_packet_field {
@@ -244,6 +247,9 @@ macro_rules! read_packet_field {
     };
     ($stream:ident, ChunkSection) => {
         $stream.read_chunk_section()
+    };
+    ($stream:ident, BlockPosition) => {
+        $stream.read_position()
     };
 }
 
@@ -294,6 +300,9 @@ macro_rules! write_packet_field {
     ($stream:ident, $value:expr, ChunkSection) => {
         $stream.write_chunk_section($value)
     };
+    ($stream:ident, $value:expr, BlockPosition) => {
+        $stream.write_position($value)
+    };
 }
 
 macro_rules! translate_incoming_packet_field {
@@ -328,6 +337,13 @@ macro_rules! translate_incoming_packet_field {
     ($value:expr, $transdata:expr, ZEntity) => {
         $value + ($transdata.map.position.z * CHUNK_SIZE) as f64
     };
+    ($value:expr, $transdata:expr, BlockPosition) => {
+        BlockPosition {
+            x: $value.x + ($transdata.map.position.x * CHUNK_SIZE) as u32,
+            y: $value.y,
+            z: $value.z + ($transdata.map.position.z * CHUNK_SIZE) as u32
+        }
+    };
 }
 
 macro_rules! translate_outgoing_packet_field {
@@ -336,6 +352,13 @@ macro_rules! translate_outgoing_packet_field {
     };
     ($value:expr, $transdata:expr, ZEntity) => {
         $value - ($transdata.map.position.z * CHUNK_SIZE) as f64
+    };
+    ($value:expr, $transdata:expr, BlockPosition) => {
+        BlockPosition {
+            x: $value.x - ($transdata.map.position.x * CHUNK_SIZE) as u32,
+            y: $value.y,
+            z: $value.z - ($transdata.map.position.z * CHUNK_SIZE) as u32
+        }
     };
     ($value:expr, $transdata:expr) => {
         $value

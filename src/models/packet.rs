@@ -2,7 +2,7 @@
 //The macro is much cleaner if we allow for unused variables
 use super::constants::{CHUNK_SIZE, ENTITY_ID_BLOCK_SIZE};
 use super::minecraft_protocol::{MinecraftProtocolReader, MinecraftProtocolWriter};
-use super::minecraft_types::ChunkSection;
+use super::minecraft_types::{ChunkSection, BlockPosition};
 use super::translation::TranslationInfo;
 use std::any::type_name;
 use std::io::{Cursor, Read, Write};
@@ -63,6 +63,19 @@ packet_boilerplate!(
             (yaw, Float),
             (pitch, Float),
             (on_ground, Boolean)
+        ]
+    ),
+    (
+        3,
+        PlayerBlockPlacement,
+        0x29,
+        [
+            (location, BlockPosition, BlockPosition),
+            (face, VarInt),
+            (hand, VarInt),
+            (cursor_x, Float),
+            (cursor_y, Float),
+            (cursor_z, Float)
         ]
     ),
     (6, ReportState, 0x1, []),
@@ -195,6 +208,25 @@ packet_boilerplate!(
             (yaw, UByte),
             (pitch, UByte),
             (on_ground, Boolean)
+        ]
+    ),
+    (
+        _,
+        BlockChange, // clientbound
+        0x0b,
+        [
+            (location, BlockPosition, BlockPosition),
+            (block_id, VarInt)
+        ]
+    ),
+    (
+        _,
+        PlayerDigging, // serverbound
+        0x18,
+        [
+            (status, VarInt),
+            (location, BlockPosition, BlockPosition),
+            (face, Byte)
         ]
     )
 );

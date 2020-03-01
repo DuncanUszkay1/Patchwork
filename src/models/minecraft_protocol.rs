@@ -330,21 +330,12 @@ fn write_position<S: Write>(stream: &mut S, v: BlockPosition) {
     let z = (u64::from(v.z) & 0x03FF_FFFF);
     let y = (u64::from(v.y) & 0xFFF) << 26;
 
-    println!("write x: {:?}", x);
-    println!("write y: {:?}", y);
-    println!("write z: {:?}", z);
 
     let mut encoded_position = x | y | z;
-    println!("Write position: encoded is {:?}", encoded_position);
     let x = encoded_position >> 38;
     let y = (encoded_position & 0x0000003FFc000000) >> 26;
     let z = (encoded_position & 0x0000000003FFFFFF);
 
-    println!("test read: {:?}", BlockPosition {
-        x: (x as u32),
-        y: (y as u32),
-        z: (z as u32),
-    });
     stream.write_unsigned_long(encoded_position);
 }
 

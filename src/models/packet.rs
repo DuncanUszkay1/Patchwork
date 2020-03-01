@@ -70,7 +70,7 @@ packet_boilerplate!(
         PlayerBlockPlacement,
         0x29,
         [
-            (location, BlockPosition),
+            (location, BlockPosition, BlockPosition),
             (face, VarInt),
             (hand, VarInt),
             (cursor_x, Float),
@@ -211,21 +211,21 @@ packet_boilerplate!(
         ]
     ),
     (
-        6,
+        _,
         BlockChange, // clientbound
         0x0b,
         [
-            (location, BlockPosition),
+            (location, BlockPosition, BlockPosition),
             (block_id, VarInt)
         ]
     ),
     (
-        3,
+        _,
         PlayerDigging, // serverbound
         0x18,
         [
             (status, VarInt),
-            (location, BlockPosition),
+            (location, BlockPosition, BlockPosition),
             (face, Byte)
         ]
     )

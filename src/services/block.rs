@@ -88,23 +88,33 @@ impl Block {
         }
     }
     pub fn place_block(&mut self, position: BlockPosition) {
-        println!("place at {:?} {:?} {:?} {:?}", get_pillar_row_index(position),
-            get_pillar_index(position),
-            get_section_index(position),
-            get_block_index(position)
-            );
-        self.block_ids
-            [get_pillar_row_index(position)]
-            [get_pillar_index(position)]
-            [get_section_index(position)]
-            [get_block_index(position)] = 1;
+        //println!("position: {:?} place at {:?} {:?} {:?} {:?}", position,
+            //get_pillar_row_index(position),
+            //get_pillar_index(position),
+            //get_section_index(position),
+            //get_block_index(position)
+            //);
+        //self.block_ids
+            //[get_pillar_row_index(position)]
+            //[get_pillar_index(position)]
+            //[get_section_index(position)]
+            //[get_block_index(position)] = 1;
+        if let Some(mut block) = self.block_ids.get_mut(get_pillar_row_index(position)).and_then(|pillar_row|
+                pillar_row.get_mut(get_pillar_index(position)).and_then(|pillar|
+                    pillar.get_mut(get_section_index(position)).and_then(|section|
+                        section.get_mut(get_block_index(position))
+        ))) {
+            *block = 1;
+        }
     }
     pub fn break_block(&mut self, position: BlockPosition) {
-        self.block_ids
-            [get_pillar_row_index(position)]
-            [get_pillar_index(position)]
-            [get_section_index(position)]
-            [get_block_index(position)] = 0;
+        if let Some(mut block) = self.block_ids.get_mut(get_pillar_row_index(position)).and_then(|pillar_row|
+                pillar_row.get_mut(get_pillar_index(position)).and_then(|pillar|
+                    pillar.get_mut(get_section_index(position)).and_then(|section|
+                        section.get_mut(get_block_index(position))
+        ))) {
+            *block = 0;
+        }
     }
 }
 
@@ -162,7 +172,6 @@ fn get_position_of_placement(position: BlockPosition, face: Face) -> BlockPositi
 }
 
 fn refresh_chunk<M: Messenger + Clone>(conn_id: Uuid, block_ids: &mut Vec<i32>, messenger: M) {
-    println!("block ids {:?}", block_ids);
     messenger.send_packet(
         conn_id,
         Packet::ChunkData(ChunkData {

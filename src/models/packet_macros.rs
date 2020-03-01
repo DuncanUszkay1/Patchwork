@@ -337,6 +337,13 @@ macro_rules! translate_incoming_packet_field {
     ($value:expr, $transdata:expr, ZEntity) => {
         $value + ($transdata.map.position.z * CHUNK_SIZE) as f64
     };
+    ($value:expr, $transdata:expr, BlockPosition) => {
+        BlockPosition {
+            x: $value.x + ($transdata.map.position.x * CHUNK_SIZE) as u32,
+            y: $value.y,
+            z: $value.z + ($transdata.map.position.z * CHUNK_SIZE) as u32
+        }
+    };
 }
 
 macro_rules! translate_outgoing_packet_field {
@@ -345,6 +352,13 @@ macro_rules! translate_outgoing_packet_field {
     };
     ($value:expr, $transdata:expr, ZEntity) => {
         $value - ($transdata.map.position.z * CHUNK_SIZE) as f64
+    };
+    ($value:expr, $transdata:expr, BlockPosition) => {
+        BlockPosition {
+            x: $value.x - ($transdata.map.position.x * CHUNK_SIZE) as u32,
+            y: $value.y,
+            z: $value.z - ($transdata.map.position.z * CHUNK_SIZE) as u32
+        }
     };
     ($value:expr, $transdata:expr) => {
         $value

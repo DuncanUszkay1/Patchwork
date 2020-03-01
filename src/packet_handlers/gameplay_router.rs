@@ -48,6 +48,9 @@ pub fn route_packet<P: PlayerState, PA: PatchworkState, B: BlockState>(
                 }),
             );
         }
+        Packet::PlayerBlockPlacement(block_placement) => {
+            println!("block placement #{:?}", block_placement);
+        }
         Packet::ChatMessage(_) => {
             chat_message_router::route_packet(p, conn_id, patchwork_state);
         }

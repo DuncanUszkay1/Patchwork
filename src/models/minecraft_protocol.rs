@@ -339,16 +339,9 @@ fn write_position<S: Write>(stream: &mut S, v: BlockPosition) {
 
 fn read_position<S: Read>(stream: &mut S) -> BlockPosition {
     let encoded_position = stream.read_unsigned_long();
-    println!("Read position: encoded is {:?}", encoded_position);
     let x = encoded_position >> 38;
-    let y = encoded_position & 0xFFF;
-    let z = encoded_position << 26 >> 38;
-
-    println!(
-        "Read position: decoded is (x={:?},y={:?},z={:?})\n",
-        x, y, z
-    );
-
+    let y = (encoded_position & 0x0000003FFc000000) >> 26;
+    let z = (encoded_position & 0x0000000003FFFFFF);
     BlockPosition {
         x: (x as u32),
         y: (y as u16),

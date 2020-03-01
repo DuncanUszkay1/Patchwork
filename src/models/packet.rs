@@ -220,7 +220,7 @@ packet_boilerplate!(
         ]
     ),
     (
-        6,
+        3,
         PlayerDigging, // serverbound
         0x18,
         [

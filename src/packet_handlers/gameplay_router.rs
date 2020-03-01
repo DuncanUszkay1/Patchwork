@@ -49,18 +49,13 @@ pub fn route_packet<P: PlayerState, PA: PatchworkState, B: BlockState>(
             );
         }
         Packet::PlayerBlockPlacement(block_placement) => {
-            println!("block placement #{:?}", block_placement);
+            block_state.block_placement(conn_id, block_placement);
         }
         Packet::ChatMessage(_) => {
             chat_message_router::route_packet(p, conn_id, patchwork_state);
         }
-        Packet::PlayerDigging(block_packet) => {
-            println!("PlayerDigging from gameplay_router");
-            block_state.break_block_serverbound(conn_id, block_packet);
-        }
-        Packet::BlockChange(block_packet) => {
-            println!("BlockChange from gameplay_router");
-            block_state.break_block_clientbound(conn_id, block_packet);
+        Packet::PlayerDigging(player_digging) => {
+            block_state.break_block(conn_id, player_digging);
         }
         Packet::Unknown => (),
         _ => {

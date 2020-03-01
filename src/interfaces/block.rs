@@ -1,4 +1,4 @@
-use super::packet::{BlockChange, PlayerDigging};
+use super::packet::{BlockChange, PlayerDigging, PlayerBlockPlacement};
 
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -7,19 +7,19 @@ define_interface!(
     BlockState,
     (Report, report, [conn_id: Uuid]),
     (
-        BreakBlockClientbound,
-        break_block_clientbound,
-        [conn_id: Uuid, block_packet: BlockChange]
+        BlockPlacement,
+        block_placement,
+        [conn_id: Uuid, block_placement: PlayerBlockPlacement]
     ),
     (
-        BreakBlockServerbound,
-        break_block_serverbound,
-        [conn_id: Uuid, block_packet: PlayerDigging]
+        BreakBlock,
+        break_block,
+        [conn_id: Uuid, player_digging: PlayerDigging]
     )
 );
 
 #[derive(Debug, Clone)]
 pub struct Block {
     pub conn_id: Uuid,
-    pub block_ids: Vec<i32>,
+    pub block_ids: Vec::<Vec::<Vec::<Vec::<i32>>>>
 }

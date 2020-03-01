@@ -326,14 +326,25 @@ fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
 }
 
 fn write_position<S: Write>(stream: &mut S, v: BlockPosition) {
-    println!(
-        "Write position: decoded is (x={:?},y={:?},z={:?})\n",
-        v.x, v.y, v.z
-    );
-    let mut encoded_position: u64 = u64::from(
-        ((v.x & 0x03FF_FFFF) << 38) | ((v.z & 0x03FF_FFFF) << 12) | (u32::from(v.y) & 0xFFF),
-    );
+    let x = ((u64::from(v.x) & 0x03FF_FFFF) << 38);
+    let z = (u64::from(v.z) & 0x03FF_FFFF);
+    let y = (u64::from(v.y) & 0xFFF) << 26;
+
+    println!("write x: {:?}", x);
+    println!("write y: {:?}", y);
+    println!("write z: {:?}", z);
+
+    let mut encoded_position = x | y | z;
     println!("Write position: encoded is {:?}", encoded_position);
+    let x = encoded_position >> 38;
+    let y = (encoded_position & 0x0000003FFc000000) >> 26;
+    let z = (encoded_position & 0x0000000003FFFFFF);
+
+    println!("test read: {:?}", BlockPosition {
+        x: (x as u32),
+        y: (y as u32),
+        z: (z as u32),
+    });
     stream.write_unsigned_long(encoded_position);
 }
 
@@ -344,7 +355,7 @@ fn read_position<S: Read>(stream: &mut S) -> BlockPosition {
     let z = (encoded_position & 0x0000000003FFFFFF);
     BlockPosition {
         x: (x as u32),
-        y: (y as u16),
+        y: (y as u32),
         z: (z as u32),
     }
 }

@@ -304,7 +304,7 @@ impl Direction {
         }
     }
 
-    fn shift_position(&self, position: Position) -> Position {
+    fn shift_position(self, position: Position) -> Position {
         match self {
             Direction::XPositive => Position {
                 x: position.x + 1,

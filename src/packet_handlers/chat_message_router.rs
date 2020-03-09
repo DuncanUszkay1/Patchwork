@@ -11,7 +11,7 @@ pub fn route_packet<PA: PatchworkState>(p: Packet, conn_id: Uuid, patchwork_stat
                 chat_message.message,
                 conn_id
             );
-            let mut token_stream = chat_message.message.as_str().split(" ");
+            let mut token_stream = chat_message.message.as_str().split(' ');
             match token_stream.next() {
                 Some("/connect") => {
                     connect(&mut token_stream, patchwork_state).ok();
@@ -34,7 +34,7 @@ fn connect<'a, I: Iterator<Item = &'a str>, PA: PatchworkState>(
     let port = port_str.parse::<u16>().map_err(|_| ())?;
 
     patchwork_state.new_map(Peer {
-        port: port,
+        port,
         address: String::from(addr),
     });
 

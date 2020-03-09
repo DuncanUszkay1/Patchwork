@@ -44,7 +44,7 @@ pub struct StatusResponse {
     pub description: Description,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BlockPosition {
     pub x: u32,
     pub y: u32,

@@ -50,59 +50,63 @@ pub fn start<
                         map_index: 0,
                         conn_id: None,
                     });
-                match &patchwork.maps[anchor.map_index].peer_connection {
-                    Some(_) => match msg.packet {
-                        Packet::Unknown => {}
-                        _ => {
-                            trace!(
-                                "Routing packet from conn_id {:?} through anchor",
-                                msg.conn_id
-                            );
-                            player_state.anchored_move_and_look(
-                                msg.conn_id,
-                                extract_player_position((&msg.packet).clone()),
-                                None,
-                            );
-                            messenger.send_packet(anchor.conn_id.unwrap(), msg.packet.clone());
-                        }
-                    },
-                    None => {
-                        trace!("Routing packet from conn_id {:?} locally", msg.conn_id);
-                        gameplay_router::route_packet(
-                            msg.packet.clone(),
-                            msg.conn_id,
-                            player_state.clone(),
-                            sender.clone(),
-                        );
-                    }
-                }
                 if let Some(position) = extract_map_position((&msg.packet).clone()) {
-                    let new_map_index = patchwork_clone.position_map_index(position);
-                    if new_map_index != anchor.map_index {
-                        anchor.disconnect(messenger.clone());
-                        *anchor = match &patchwork.maps[new_map_index].peer_connection {
-                            Some(peer_connection) => Anchor::connect(
-                                peer_connection.peer.clone(),
-                                msg.conn_id,
-                                new_map_index,
-                                patchwork.maps[new_map_index].position.x,
-                                messenger.clone(),
-                                player_state.clone(),
-                            )
-                            .unwrap(),
-                            None => {
-                                gameplay_router::route_packet(
-                                    msg.packet.clone(),
-                                    msg.conn_id,
-                                    player_state.clone(),
-                                    sender.clone(),
-                                );
-                                if patchwork.maps[anchor.map_index].peer_connection.is_some() {
-                                    player_state.reintroduce(msg.conn_id);
+                    match patchwork_clone.position_map_index(position) {
+                        None => player_state.teleport_to_last_valid_pos(msg.conn_id),
+                        Some(new_map_index) => {
+                            match &patchwork.maps[anchor.map_index].peer_connection {
+                                Some(_) => match msg.packet {
+                                    Packet::Unknown => {}
+                                    _ => {
+                                        trace!(
+                                            "Routing packet from conn_id {:?} through anchor",
+                                            msg.conn_id
+                                        );
+                                        player_state.anchored_move_and_look(
+                                            msg.conn_id,
+                                            extract_player_position((&msg.packet).clone()),
+                                            None,
+                                        );
+                                        messenger.send_packet(anchor.conn_id.unwrap(), msg.packet.clone());
+                                    }
+                                },
+                                None => {
+                                    trace!("Routing packet from conn_id {:?} locally", msg.conn_id);
+                                    gameplay_router::route_packet(
+                                        msg.packet.clone(),
+                                        msg.conn_id,
+                                        player_state.clone(),
+                                        sender.clone(),
+                                    );
                                 }
-                                Anchor {
-                                    conn_id: None,
-                                    map_index: new_map_index,
+                            }
+                            if new_map_index != anchor.map_index {
+                                anchor.disconnect(messenger.clone());
+                                *anchor = match &patchwork.maps[new_map_index].peer_connection {
+                                    Some(peer_connection) => Anchor::connect(
+                                        peer_connection.peer.clone(),
+                                        msg.conn_id,
+                                        new_map_index,
+                                        patchwork.maps[new_map_index].position.x,
+                                        messenger.clone(),
+                                        player_state.clone(),
+                                    )
+                                    .unwrap(),
+                                    None => {
+                                        gameplay_router::route_packet(
+                                            msg.packet.clone(),
+                                            msg.conn_id,
+                                            player_state.clone(),
+                                            sender.clone(),
+                                        );
+                                        if patchwork.maps[anchor.map_index].peer_connection.is_some() {
+                                            player_state.reintroduce(msg.conn_id);
+                                        }
+                                        Anchor {
+                                            conn_id: None,
+                                            map_index: new_map_index,
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -215,11 +219,10 @@ impl Patchwork {
             .push(Map::new(next_position, self.next_entity_id_block()));
     }
 
-    pub fn position_map_index(self, position: Position) -> usize {
+    pub fn position_map_index(self, position: Position) -> Option<usize> {
         self.maps
             .into_iter()
             .position(|map| map.position == position)
-            .expect("Could not find map for position")
     }
 
     pub fn connect_map<M: Messenger + Clone>(

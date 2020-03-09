@@ -42,6 +42,11 @@ define_interface!(
         StatusResponse,
         status_response,
         [conn_id: Uuid, version: Version, description: Description]
+    ),
+    (
+        TeleportToLastValidPos,
+        teleport_to_last_valid_pos,
+        [conn_id: Uuid]
     )
 );
 

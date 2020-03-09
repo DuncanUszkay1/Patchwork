@@ -203,6 +203,19 @@ fn handle_message<M: Messenger + Clone, B: BlockState + Clone, PA: PatchworkStat
             };
             messenger.send_packet(msg.conn_id, Packet::StatusResponse(status_response));
         }
+        Operations::TeleportToLastValidPos(msg) => {
+            trace!(
+                "Teleporting to last valid position for conn_id {:?}",
+                msg.conn_id
+            );
+            let player = players
+                .get(&msg.conn_id)
+                .expect("Could not teleport to valid position: player not found");
+            messenger.send_packet(
+                msg.conn_id, 
+                Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_last_valid_packet())
+            );
+        }
     }
 }
 
@@ -244,6 +257,18 @@ impl Player {
             max_players: 2,
             level_type: String::from("default"),
             reduced_debug_info: false,
+        }
+    }
+
+    pub fn pos_and_look_last_valid_packet(&self) -> ClientboundPlayerPositionAndLook {
+        ClientboundPlayerPositionAndLook {
+            x: self.position.x,
+            y: self.position.y,
+            z: self.position.z,
+            yaw: self.angle.yaw,
+            pitch: self.angle.pitch,
+            flags: 0,
+            teleport_id: 0
         }
     }
 

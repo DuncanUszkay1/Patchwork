@@ -213,7 +213,7 @@ fn handle_message<M: Messenger + Clone, B: BlockState + Clone, PA: PatchworkStat
                 .expect("Could not teleport to valid position: player not found");
             messenger.send_packet(
                 msg.conn_id, 
-                Packet::ClientboundPlayerPositionAndLook(player.pos_and_look_last_valid_packet())
+                Packet::ClientboundPlayerPositionAndLook(player.pos_last_valid_packet(msg.look))
             );
         }
     }
@@ -260,13 +260,13 @@ impl Player {
         }
     }
 
-    pub fn pos_and_look_last_valid_packet(&self) -> ClientboundPlayerPositionAndLook {
+    pub fn pos_last_valid_packet(&self, look: Option<Angle>) -> ClientboundPlayerPositionAndLook {
         ClientboundPlayerPositionAndLook {
             x: self.position.x,
             y: self.position.y,
             z: self.position.z,
-            yaw: self.angle.yaw,
-            pitch: self.angle.pitch,
+            yaw: look.unwrap_or(self.angle).yaw,
+            pitch: look.unwrap_or(self.angle).pitch,
             flags: 0,
             teleport_id: 0
         }

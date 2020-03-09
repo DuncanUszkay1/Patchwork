@@ -1,7 +1,9 @@
 use super::interfaces::messenger::Messenger;
 use super::interfaces::packet_processor::PacketProcessor;
 use super::interfaces::patchwork::Operations;
-use super::interfaces::player::{PlayerState, Position as PlayerPosition};
+use super::interfaces::player::{
+    PlayerState, Position as PlayerPosition, Angle as PlayerAngle
+};
 use super::map::{Map, Peer, PeerConnection, Position};
 use super::packet;
 use super::packet::Packet;
@@ -52,7 +54,10 @@ pub fn start<
                     });
                 if let Some(position) = extract_map_position((&msg.packet).clone()) {
                     match patchwork_clone.position_map_index(position) {
-                        None => player_state.teleport_to_last_valid_pos(msg.conn_id),
+                        None => {
+                            let look = extract_player_look((&msg.packet).clone());
+                            player_state.teleport_to_last_valid_pos(msg.conn_id, look);
+                        },
                         Some(new_map_index) => {
                             match &patchwork.maps[anchor.map_index].peer_connection {
                                 Some(_) => match msg.packet {
@@ -148,6 +153,16 @@ fn extract_player_position(packet: Packet) -> Option<PlayerPosition> {
             z: packet.z,
         }),
         _ => None,
+    }
+}
+
+fn extract_player_look(packet: Packet) -> Option<PlayerAngle> {
+    match packet {
+        Packet:: PlayerPositionAndLook(packet) => Some(PlayerAngle {
+            pitch: packet.pitch,
+            yaw: packet.yaw
+        }),
+        _=> None,
     }
 }
 

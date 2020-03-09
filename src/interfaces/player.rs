@@ -46,7 +46,7 @@ define_interface!(
     (
         TeleportToLastValidPos,
         teleport_to_last_valid_pos,
-        [conn_id: Uuid]
+        [conn_id: Uuid, look: Option<Angle>]
     )
 );
 

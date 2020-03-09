@@ -2,7 +2,7 @@
 //The macro is much cleaner if we allow for unused variables
 use super::constants::{CHUNK_SIZE, ENTITY_ID_BLOCK_SIZE};
 use super::minecraft_protocol::{MinecraftProtocolReader, MinecraftProtocolWriter};
-use super::minecraft_types::{ChunkSection, BlockPosition};
+use super::minecraft_types::{BlockPosition, ChunkSection};
 use super::translation::TranslationInfo;
 use std::any::type_name;
 use std::io::{Cursor, Read, Write};

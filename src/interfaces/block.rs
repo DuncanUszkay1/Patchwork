@@ -1,4 +1,4 @@
-use super::packet::{BlockChange, PlayerDigging, PlayerBlockPlacement};
+use super::packet::{PlayerBlockPlacement, PlayerDigging};
 
 use std::sync::mpsc::Sender;
 use uuid::Uuid;
@@ -21,5 +21,5 @@ define_interface!(
 #[derive(Debug, Clone)]
 pub struct Block {
     pub conn_id: Uuid,
-    pub block_ids: Vec::<Vec::<Vec::<Vec::<i32>>>>
+    pub block_ids: Vec<Vec<Vec<Vec<i32>>>>,
 }

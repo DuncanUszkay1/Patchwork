@@ -326,15 +326,14 @@ fn read_chunk_section<S: Read>(stream: &mut S) -> ChunkSection {
 }
 
 fn write_position<S: Write>(stream: &mut S, v: BlockPosition) {
-    let x = ((u64::from(v.x) & 0x03FF_FFFF) << 38);
-    let z = (u64::from(v.z) & 0x03FF_FFFF);
+    let x = (u64::from(v.x) & 0x03FF_FFFF) << 38;
+    let z = u64::from(v.z) & 0x03FF_FFFF;
     let y = (u64::from(v.y) & 0xFFF) << 26;
 
-
-    let mut encoded_position = x | y | z;
-    let x = encoded_position >> 38;
-    let y = (encoded_position & 0x0000003FFc000000) >> 26;
-    let z = (encoded_position & 0x0000000003FFFFFF);
+    let encoded_position = x | y | z;
+    let _x = encoded_position >> 38;
+    let _y = (encoded_position & 0x0000_003F_FC00_0000) >> 26;
+    let _z = encoded_position & 0x0000_0000_03FF_FFFF;
 
     stream.write_unsigned_long(encoded_position);
 }
@@ -342,8 +341,8 @@ fn write_position<S: Write>(stream: &mut S, v: BlockPosition) {
 fn read_position<S: Read>(stream: &mut S) -> BlockPosition {
     let encoded_position = stream.read_unsigned_long();
     let x = encoded_position >> 38;
-    let y = (encoded_position & 0x0000003FFc000000) >> 26;
-    let z = (encoded_position & 0x0000000003FFFFFF);
+    let y = (encoded_position & 0x0000_003F_FC00_0000) >> 26;
+    let z = encoded_position & 0x0000_0000_03FF_FFFF;
     BlockPosition {
         x: (x as u32),
         y: (y as u32),
@@ -445,5 +444,15 @@ mod tests {
         //int max
         let mut stream = std::io::Cursor::new(vec![255, 255, 255, 255, 255]);
         read_var_int(&mut stream).unwrap();
+    }
+
+    #[test]
+    fn test_read_block_position() {
+        let block_position = BlockPosition { x: 1, y: 1, z: 1 };
+
+        let mut stream = Vec::<u8>::new();
+        stream.write_position(block_position.clone());
+        let mut stream = std::io::Cursor::new(stream);
+        assert_eq!(block_position, read_position(&mut stream));
     }
 }

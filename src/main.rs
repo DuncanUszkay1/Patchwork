@@ -42,42 +42,42 @@ fn main() {
     SimpleLogger::init(level, logger_config).unwrap();
 
     define_services!(
-        (
-            module: services::player::start,
-            name: player_state,
-            dependencies: [messenger, block_state, patchwork_state]
-        ),
-        (
-            module: services::block::start,
-            name: block_state,
-            dependencies: [messenger]
-        ),
-        (
-            module: services::patchwork::start,
-            name: patchwork_state,
-            dependencies: [messenger, inbound_packet_processor, player_state, block_state]
-        ),
-        (
-            module: services::messenger::start,
-            name: messenger,
-            dependencies: []
-        ),
-        (
-            module: services::packet_processor::start_inbound,
-            name: inbound_packet_processor,
-            dependencies: [messenger, player_state, block_state, patchwork_state]
-        ),
-        (
-            module: services::connection::start,
-            name: connection_service,
-            dependencies: [messenger, player_state, patchwork_state, inbound_packet_processor]
-        ),
-        (
-            module: services::keep_alive::start,
-            name: keep_alive,
-            dependencies: [messenger]
-        )
-    );
+    (
+        module: services::player::start,
+        name: player_state,
+        dependencies: [messenger, block_state, patchwork_state]
+    ),
+    (
+        module: services::block::start,
+        name: block_state,
+        dependencies: [messenger]
+    ),
+    (
+        module: services::patchwork::start,
+        name: patchwork_state,
+        dependencies: [messenger, inbound_packet_processor, player_state, block_state]
+    ),
+    (
+        module: services::messenger::start,
+        name: messenger,
+        dependencies: []
+    ),
+    (
+        module: services::packet_processor::start_inbound,
+        name: inbound_packet_processor,
+        dependencies: [messenger, player_state, block_state, patchwork_state]
+    ),
+    (
+        module: services::connection::start,
+        name: connection_service,
+        dependencies: [messenger, player_state, patchwork_state, inbound_packet_processor]
+    ),
+    (
+        module: services::keep_alive::start,
+        name: keep_alive,
+        dependencies: [messenger]
+    )
+        );
 
     trace!("Services Started");
 

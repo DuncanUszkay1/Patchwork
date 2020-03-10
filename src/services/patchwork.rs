@@ -53,6 +53,22 @@ pub fn start<
                         map_index: 0,
                         conn_id: None,
                     });
+                if let Some(position) = extract_target_position((&msg.packet).clone()) {
+                    let target_map_index = patchwork_clone.clone().position_map_index(position);
+                    if target_map_index != anchor.map_index {
+                        messenger.send_packet(
+                            msg.conn_id,
+                            Packet::ClientboundChatMessage(packet::ClientboundChatMessage {
+                                message: String::from(
+                                    "{\"text\":\"You must walk onto that map first before interacting with it\",\"bold\": \"true\"}",
+                                ),
+                                position: 1
+                            }),
+                        );
+                        patchwork.clone().report(messenger.clone());
+                        continue;
+                    }
+                }
                 match &patchwork.maps[anchor.map_index].peer_connection {
                     Some(_) => match msg.packet {
                         Packet::Unknown => {}
@@ -119,6 +135,20 @@ pub fn start<
                 patchwork.clone().report(messenger.clone());
             }
         }
+    }
+}
+
+fn extract_target_position(packet: Packet) -> Option<Position> {
+    match packet {
+        Packet::PlayerDigging(packet) => Some(Position {
+            x: (packet.location.x as f32 / 16.0) as i32,
+            z: (packet.location.z as f32 / 16.0) as i32,
+        }),
+        Packet::PlayerBlockPlacement(packet) => Some(Position {
+            x: (packet.location.x as f32 / 16.0) as i32,
+            z: (packet.location.z as f32 / 16.0) as i32,
+        }),
+        _ => None,
     }
 }
 
